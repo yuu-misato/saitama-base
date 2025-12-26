@@ -88,6 +88,7 @@ export interface Community {
   inviteCode: string; // URLシェア用
   membersCount: number;
   imageUrl?: string;
+  isSecret: boolean; // 非公開モード
 }
 
 export interface CommunityMember {

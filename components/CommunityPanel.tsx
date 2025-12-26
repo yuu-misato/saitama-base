@@ -4,7 +4,7 @@ import { Community, User } from '../types';
 interface CommunityPanelProps {
     user: User;
     myCommunities: Community[];
-    onCreateCommunity: (name: string, description: string) => void;
+    onCreateCommunity: (name: string, description: string, isSecret: boolean) => void;
     onJoinCommunity: (inviteCode: string) => void;
     onSelectCommunity: (community: Community) => void;
 }
@@ -13,6 +13,7 @@ const CommunityPanel: React.FC<CommunityPanelProps> = ({ user, myCommunities, on
     const [isCreating, setIsCreating] = useState(false);
     const [newName, setNewName] = useState('');
     const [newDesc, setNewDesc] = useState('');
+    const [isSecret, setIsSecret] = useState(false);
     const [inviteInput, setInviteInput] = useState('');
 
     return (
@@ -74,15 +75,25 @@ const CommunityPanel: React.FC<CommunityPanelProps> = ({ user, myCommunities, on
                             value={newDesc}
                             onChange={e => setNewDesc(e.target.value)}
                         />
+
+                        <label className="flex items-center gap-3 px-2 cursor-pointer">
+                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors ${isSecret ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
+                                {isSecret && <i className="fas fa-check text-white text-xs"></i>}
+                            </div>
+                            <input type="checkbox" className="hidden" checked={isSecret} onChange={e => setIsSecret(e.target.checked)} />
+                            <span className="font-bold text-slate-600">シークレットモード（検索に表示しない）</span>
+                        </label>
+
                         <div className="flex gap-3">
                             <button onClick={() => setIsCreating(false)} className="flex-1 py-4 font-bold text-slate-400 bg-slate-50 rounded-2xl">キャンセル</button>
                             <button
                                 onClick={() => {
                                     if (newName) {
-                                        onCreateCommunity(newName, newDesc);
+                                        onCreateCommunity(newName, newDesc, isSecret);
                                         setIsCreating(false);
                                         setNewName('');
                                         setNewDesc('');
+                                        setIsSecret(false);
                                     }
                                 }}
                                 className="flex-1 py-4 font-black text-white bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors"

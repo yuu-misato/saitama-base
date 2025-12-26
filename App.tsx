@@ -59,6 +59,28 @@ const App: React.FC = () => {
     }
   }, [selectedAreas, user]);
 
+  const [publicCommunity, setPublicCommunity] = useState<Community | null>(null);
+
+  // URLからの招待コードチェック
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const inviteCode = params.get('invite');
+    if (inviteCode) {
+      // 本来はDBから取得。ここではモック
+      // テスト用に特定のコードでモックデータを返す
+      const mockPublicComm: Community = {
+        id: 'c-public-demo',
+        name: '三郷1丁目町会',
+        description: '三郷1丁目の住民とお知らせを共有するコミュニティです。',
+        ownerId: 'owner',
+        inviteCode: inviteCode,
+        membersCount: 42,
+        isSecret: false // 公開
+      };
+      setPublicCommunity(mockPublicComm);
+    }
+  }, []);
+
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     // Supabaseを使用したLINE OAuthログイン
     // LINE連携設定が完了するまで、一時的にモックログインを使用します
@@ -85,6 +107,14 @@ const App: React.FC = () => {
       shopName: role === 'business' ? '大宮盆栽村カフェ' : undefined
     };
     setUser(mockUser);
+    // 自動的にコミュニティに参加させるロジックを入れる場合はここ
+    if (publicCommunity) {
+      setMyCommunities(prev => [...prev, publicCommunity]);
+      setSelectedCommunity(publicCommunity);
+      setActiveTab('community');
+      setPublicCommunity(null); // 公開ビュー終了
+    }
+
     if (role === 'business') setActiveTab('business');
     // }
   };
@@ -129,6 +159,53 @@ const App: React.FC = () => {
   };
 
   if (!user) {
+    // 公開コミュニティビュー (招待リンク経由)
+    if (publicCommunity) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center p-6 font-sans">
+          <header className="w-full max-w-lg flex items-center justify-between mb-8">
+            <div className="flex items-center gap-2 font-black text-indigo-600">
+              <span className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center">S</span>
+              Saitama BASE
+            </div>
+            <button onClick={() => setPublicCommunity(null)} className="text-xs font-bold text-slate-400">ログイン</button>
+          </header>
+
+          <div className="w-full max-w-lg space-y-6">
+            {/* コミュニティヘッダー */}
+            <div className="bg-white rounded-[2.5rem] p-8 shadow-xl text-center border-t-8 border-indigo-500">
+              <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4 text-white shadow-lg shadow-indigo-200">
+                {publicCommunity.name[0]}
+              </div>
+              <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black tracking-widest mb-3">OFFICIAL COMMUNITY</span>
+              <h1 className="text-3xl font-black text-slate-800 mb-2">{publicCommunity.name}</h1>
+              <p className="text-slate-500 font-medium mb-6">{publicCommunity.description}</p>
+
+              <button onClick={() => handleLineLogin('resident')} className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-[#06C755]/20 animate-pulse">
+                <i className="fab fa-line text-2xl"></i> このコミュニティに参加する
+              </button>
+              <p className="text-[10px] text-slate-400 mt-3 font-bold">LINEアカウントで即座に参加できます</p>
+            </div>
+
+            {/* 公開掲示板プレビュー */}
+            <div>
+              <h3 className="text-sm font-black text-slate-400 ml-4 mb-3">📌 最新の回覧板（プレビュー）</h3>
+              <div className="bg-white rounded-[2rem] p-6 border border-slate-100 opacity-80">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-black text-slate-800">今月の資源回収について</h4>
+                  <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">3日前</span>
+                </div>
+                <p className="text-sm text-slate-500 line-clamp-2">今月の資源回収は第3水曜日になります。古紙・ダンボールは...</p>
+                <div className="mt-3 pt-3 border-t border-slate-50 text-center">
+                  <span className="text-indigo-600 text-xs font-bold">続きを読むには参加してください</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-sans">
         <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-700">
@@ -276,14 +353,15 @@ const App: React.FC = () => {
           <CommunityPanel
             user={user}
             myCommunities={myCommunities}
-            onCreateCommunity={(name, desc) => {
+            onCreateCommunity={(name, desc, isSecret) => {
               const newComm: Community = {
                 id: `c-${Date.now()}`,
                 name,
                 description: desc,
                 ownerId: user.id,
                 inviteCode: Math.random().toString(36).substring(7),
-                membersCount: 1
+                membersCount: 1,
+                isSecret
               };
               setMyCommunities([...myCommunities, newComm]);
             }}
@@ -295,7 +373,8 @@ const App: React.FC = () => {
                 description: '招待コード経由で参加しました',
                 ownerId: 'other',
                 inviteCode: code,
-                membersCount: 12
+                membersCount: 12,
+                isSecret: false
               };
               setMyCommunities([...myCommunities, newComm]);
               alert('コミュニティに参加しました！');
