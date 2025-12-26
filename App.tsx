@@ -1,4 +1,4 @@
-
+```
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import PostCard from './components/PostCard';
@@ -7,6 +7,7 @@ import CouponList from './components/CouponList';
 import ChokaiPanel from './components/ChokaiPanel';
 import CommunityPanel from './components/CommunityPanel';
 import BusinessPanel from './components/BusinessPanel';
+import LandingPage from './components/LandingPage';
 import { Post, PostCategory, Coupon, Kairanban, VolunteerMission, User, Community } from './types';
 import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
 import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons, getMissions, createMission, joinMission } from './services/supabaseService';
@@ -290,527 +291,524 @@ const App: React.FC = () => {
 
     const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINE_REDIRECT_URI)}&state=${state}&scope=profile%20openid&bot_prompt=aggressive`;
 
-    window.location.href = lineAuthUrl;
+window.location.href = lineAuthUrl;
   };
 
-  const addScore = (amount: number) => {
-    setScore(prev => prev + amount);
-    setShowScorePopup({ show: true, amount });
-    setTimeout(() => setShowScorePopup({ show: false, amount: 0 }), 2000);
+const addScore = (amount: number) => {
+  setScore(prev => prev + amount);
+  setShowScorePopup({ show: true, amount });
+  setTimeout(() => setShowScorePopup({ show: false, amount: 0 }), 2000);
+};
+
+const handleCreateKairanban = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsBroadcasting(true);
+
+  const kairanPayload = {
+    title: newPost.title,
+    content: newPost.content,
+    area: newPost.area,
+    author: user?.nickname,
+    sent_to_line: true,
+    communityId: selectedCommunity?.id
   };
 
-  const handleCreateKairanban = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsBroadcasting(true);
+  const { data, error } = await createKairanbanWithNotification(kairanPayload);
 
-    const kairanPayload = {
-      title: newPost.title,
-      content: newPost.content,
-      area: newPost.area,
-      author: user?.nickname,
-      sent_to_line: true,
-      communityId: selectedCommunity?.id
+  if (!error && data && data.length > 0) {
+    const newKairan: Kairanban = {
+      id: data[0].id,
+      title: data[0].title,
+      content: data[0].content,
+      // date removed as it causes type error and is not used
+      author: data[0].author,
+      points: data[0].points || 0,
+      readCount: 0,
+      isRead: false,
+      sentToLine: data[0].sent_to_line || false,
+      createdAt: data[0].created_at,
+      category: 'notice',
+      communityId: data[0].community_id
     };
-
-    const { data, error } = await createKairanbanWithNotification(kairanPayload);
-
-    if (!error && data && data.length > 0) {
-      const newKairan: Kairanban = {
-        id: data[0].id,
-        title: data[0].title,
-        content: data[0].content,
-        // date removed as it causes type error and is not used
-        author: data[0].author,
-        points: data[0].points || 0,
-        readCount: 0,
-        isRead: false,
-        sentToLine: data[0].sent_to_line || false,
-        createdAt: data[0].created_at,
-        category: 'notice',
-        communityId: data[0].community_id
-      };
-      setKairanbans([newKairan, ...kairanbans]);
-      addScore(50);
-      setIsPosting(false);
-      setNewPost({ title: '', content: '', category: 'notice', area: '' });
-    }
-    setIsBroadcasting(false);
-  };
-
-  const handleRegisterCoupon = async (coupon: Coupon) => {
-    const { data, error } = await registerLocalCoupon(coupon);
-    if (!error && data) {
-      const newCoupon = { ...coupon, id: data[0].id }; // ID from DB
-      setCoupons([newCoupon, ...coupons]);
-      addScore(100);
-    }
-  };
-
-  if (tempUser) {
-    return (
-      <RegistrationModal
-        initialNickname={tempUser.nickname}
-        onRegister={handleRegistrationComplete}
-      />
-    );
+    setKairanbans([newKairan, ...kairanbans]);
+    addScore(50);
+    setIsPosting(false);
+    setNewPost({ title: '', content: '', category: 'notice', area: '' });
   }
+  setIsBroadcasting(false);
+};
 
-  if (isEditingProfile && user) {
-    return (
-      <RegistrationModal
-        initialNickname={user.nickname}
-        onRegister={handleRegistrationComplete}
-      />
-    );
+const handleRegisterCoupon = async (coupon: Coupon) => {
+  const { data, error } = await registerLocalCoupon(coupon);
+  if (!error && data) {
+    const newCoupon = { ...coupon, id: data[0].id }; // ID from DB
+    setCoupons([newCoupon, ...coupons]);
+    addScore(100);
   }
+};
 
-  if (!user) {
-    // 公開コミュニティビュー (招待リンク経由)
-    if (publicCommunity) {
-      return (
-        <div className="min-h-screen bg-slate-50 flex flex-col items-center p-6 font-sans">
-          <header className="w-full max-w-lg flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2 font-black text-indigo-600">
-              <span className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center">S</span>
-              Saitama BASE
-            </div>
-            <button onClick={() => setPublicCommunity(null)} className="text-xs font-bold text-slate-400">ログイン</button>
-          </header>
+if (tempUser) {
+  return (
+    <RegistrationModal
+      initialNickname={tempUser.nickname}
+      onRegister={handleRegistrationComplete}
+    />
+  );
+}
 
-          <div className="w-full max-w-lg space-y-6">
-            {/* コミュニティヘッダー */}
-            <div className="bg-white rounded-[2.5rem] p-8 shadow-xl text-center border-t-8 border-indigo-500">
-              <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4 text-white shadow-lg shadow-indigo-200">
-                {publicCommunity.name[0]}
-              </div>
-              <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black tracking-widest mb-3">OFFICIAL COMMUNITY</span>
-              <h1 className="text-3xl font-black text-slate-800 mb-2">{publicCommunity.name}</h1>
-              <p className="text-slate-500 font-medium mb-6">{publicCommunity.description}</p>
+if (isEditingProfile && user) {
+  return (
+    <RegistrationModal
+      initialNickname={user.nickname}
+      onRegister={handleRegistrationComplete}
+    />
+  );
+}
 
-              <button onClick={() => handleLineLogin('resident')} className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all shadow-xl shadow-[#06C755]/20 animate-pulse">
-                <i className="fab fa-line text-2xl"></i> このコミュニティに参加する
-              </button>
-              <p className="text-[10px] text-slate-400 mt-3 font-bold">LINEアカウントで即座に参加できます</p>
-            </div>
+import LandingPage from './components/LandingPage';
 
-            {/* 公開掲示板プレビュー */}
-            <div>
-              <h3 className="text-sm font-black text-slate-400 ml-4 mb-3">📌 最新の回覧板（プレビュー）</h3>
-              <div className="bg-white rounded-[2rem] p-6 border border-slate-100 opacity-80">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="font-black text-slate-800">今月の資源回収について</h4>
-                  <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">3日前</span>
-                </div>
-                <p className="text-sm text-slate-500 line-clamp-2">今月の資源回収は第3水曜日になります。古紙・ダンボールは...</p>
-                <div className="mt-3 pt-3 border-t border-slate-50 text-center">
-                  <span className="text-indigo-600 text-xs font-bold">続きを読むには参加してください</span>
-                </div>
-              </div>
-            </div>
+if (!user) {
+  // 公開コミュニティビュー (招待リンク経由)
+  if (publicCommunity) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center p-6 font-sans">
+        <header className="w-full max-w-lg flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2 font-black text-indigo-600">
+            <span className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center">S</span>
+            Saitama BASE
           </div>
+          <button onClick={() => setPublicCommunity(null)} className="text-xs font-bold text-slate-400">ログイン</button>
+        </header>
+
+        <div className="w-full max-w-lg space-y-6">
+          {/* コミュニティヘッダー */}
+          <div className="bg-white rounded-[2.5rem] p-8 shadow-xl text-center border-t-8 border-indigo-500">
+            <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4 text-white shadow-lg shadow-indigo-200">
+              {publicCommunity.name[0]}
+            </div>
+            <i className="fab fa-line text-2xl"></i> このコミュニティに参加する
+          </button>
+          <p className="text-[10px] text-slate-400 mt-3 font-bold">LINEアカウントで即座に参加できます</p>
         </div>
-      );
-    }
 
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-sans">
-        <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-700">
-          <div className="space-y-4">
-            <div className="w-20 h-20 bg-emerald-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-emerald-500/20 italic text-3xl font-black">S</div>
-            <h1 className="text-4xl font-black tracking-tighter">Saitama BASE</h1>
-            <p className="text-slate-400 font-bold leading-relaxed">
-              Amplify × Supabase 高速インフラ稼働中<br />
-              LINE連携で地域に参加しましょう。
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <button onClick={() => handleLineLogin('resident')} className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-[#06C755]/20">
-              <i className="fab fa-line text-2xl"></i> LINEで今すぐ登録
-            </button>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => handleLineLogin('chokai_leader')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">町会長・自治会</button>
-              <button onClick={() => handleLineLogin('business')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">地域事業者</button>
+        {/* 公開掲示板プレビュー */}
+        <div>
+          <h3 className="text-sm font-black text-slate-400 ml-4 mb-3">📌 最新の回覧板（プレビュー）</h3>
+          <div className="bg-white rounded-[2rem] p-6 border border-slate-100 opacity-80">
+            <div className="flex justify-between items-start mb-2">
+              <h4 className="font-black text-slate-800">今月の資源回収について</h4>
+              <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">3日前</span>
+            </div>
+            <p className="text-sm text-slate-500 line-clamp-2">今月の資源回収は第3水曜日になります。古紙・ダンボールは...</p>
+            <div className="mt-3 pt-3 border-t border-slate-50 text-center">
+              <span className="text-indigo-600 text-xs font-bold">続きを読むには参加してください</span>
             </div>
           </div>
         </div>
       </div>
-    );
+        </div >
+      );
   }
 
-  const handleCreateMission = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const missionPayload = {
-      ...newMission,
-      area: selectedAreas[0] // Default to first selected area for now
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-sans">
+      <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-700">
+        <div className="space-y-4">
+          <div className="w-20 h-20 bg-emerald-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-emerald-500/20 italic text-3xl font-black">S</div>
+          <h1 className="text-4xl font-black tracking-tighter">Saitama BASE</h1>
+          <p className="text-slate-400 font-bold leading-relaxed">
+            Amplify × Supabase 高速インフラ稼働中<br />
+            LINE連携で地域に参加しましょう。
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <button onClick={() => handleLineLogin('resident')} className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-[#06C755]/20">
+            <i className="fab fa-line text-2xl"></i> LINEで今すぐ登録
+          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => handleLineLogin('chokai_leader')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">町会長・自治会</button>
+            <button onClick={() => handleLineLogin('business')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">地域事業者</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const handleCreateMission = async (e: React.FormEvent) => {
+  e.preventDefault();
+  const missionPayload = {
+    ...newMission,
+    area: selectedAreas[0] // Default to first selected area for now
+  };
+
+  const { data, error } = await createMission(missionPayload);
+  if (!error && data) {
+    const created: VolunteerMission = {
+      id: data[0].id,
+      title: data[0].title,
+      description: data[0].description,
+      points: data[0].points,
+      area: data[0].area,
+      date: data[0].date,
+      currentParticipants: 0,
+      maxParticipants: data[0].max_participants
     };
+    setMissions([created, ...missions]);
+    setIsCreatingMission(false);
+    setNewMission({ title: '', description: '', points: 50, area: '', date: '', maxParticipants: 5 });
+    alert('ミッションを作成しました');
+  }
+};
 
-    const { data, error } = await createMission(missionPayload);
-    if (!error && data) {
-      const created: VolunteerMission = {
-        id: data[0].id,
-        title: data[0].title,
-        description: data[0].description,
-        points: data[0].points,
-        area: data[0].area,
-        date: data[0].date,
-        currentParticipants: 0,
-        maxParticipants: data[0].max_participants
-      };
-      setMissions([created, ...missions]);
-      setIsCreatingMission(false);
-      setNewMission({ title: '', description: '', points: 50, area: '', date: '', maxParticipants: 5 });
-      alert('ミッションを作成しました');
-    }
-  };
+const handleJoinMission = async (id: string, points: number) => {
+  const { error } = await joinMission(id);
+  if (!error) {
+    setMissions(missions.map(m => m.id === id ? { ...m, currentParticipants: m.currentParticipants + 1 } : m));
+    addScore(points);
+    alert('ミッションに参加しました！');
+  }
+};
 
-  const handleJoinMission = async (id: string, points: number) => {
-    const { error } = await joinMission(id);
-    if (!error) {
-      setMissions(missions.map(m => m.id === id ? { ...m, currentParticipants: m.currentParticipants + 1 } : m));
-      addScore(points);
-      alert('ミッションに参加しました！');
-    }
-  };
+// 残りのレンダリングロジックは以前と同様
+const renderContent = () => {
+  switch (activeTab) {
+    case 'community':
+      // ... (keep existing community case logic)
+      if (selectedCommunity) {
+        // コミュニティ詳細画面
+        const communityKairanbans = kairanbans.filter(k => (k as any).communityId === selectedCommunity.id);
 
-  // 残りのレンダリングロジックは以前と同様
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'community':
-        // ... (keep existing community case logic)
-        if (selectedCommunity) {
-          // コミュニティ詳細画面
-          const communityKairanbans = kairanbans.filter(k => (k as any).communityId === selectedCommunity.id);
+        return (
+          <div className="space-y-6 animate-in slide-in-from-right duration-300">
+            {/* ヘッダー */}
+            <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden">
+              <button
+                onClick={() => setSelectedCommunity(null)}
+                className="absolute top-6 left-6 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors backdrop-blur-sm"
+              >
+                <i className="fas fa-arrow-left"></i>
+              </button>
+              <div className="mt-8">
+                <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-black tracking-widest mb-2 backdrop-blur-sm">VIP COMMUNITY</span>
+                <h2 className="text-3xl font-black mb-2">{selectedCommunity.name}</h2>
+                <p className="opacity-80 font-bold text-sm mb-6">{selectedCommunity.description}</p>
 
-          return (
-            <div className="space-y-6 animate-in slide-in-from-right duration-300">
-              {/* ヘッダー */}
-              <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden">
-                <button
-                  onClick={() => setSelectedCommunity(null)}
-                  className="absolute top-6 left-6 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors backdrop-blur-sm"
-                >
-                  <i className="fas fa-arrow-left"></i>
-                </button>
-                <div className="mt-8">
-                  <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-black tracking-widest mb-2 backdrop-blur-sm">VIP COMMUNITY</span>
-                  <h2 className="text-3xl font-black mb-2">{selectedCommunity.name}</h2>
-                  <p className="opacity-80 font-bold text-sm mb-6">{selectedCommunity.description}</p>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        const url = `${window.location.origin}?invite=${selectedCommunity.inviteCode}`;
-                        navigator.clipboard.writeText(url);
-                        alert(`招待リンクをコピーしました！\n${url}`);
-                      }}
-                      className="flex-1 py-3 bg-white text-indigo-600 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
-                    >
-                      <i className="fas fa-share-alt"></i> 招待する
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsPosting(true);
-                        setNewPost({ ...newPost, category: 'chokai', area: selectedCommunity.name });
-                      }}
-                      className="flex-1 py-3 bg-indigo-800/50 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-800/70 transition-colors border border-white/10"
-                    >
-                      <i className="fas fa-bullhorn"></i> 回覧板作成
-                    </button>
-                  </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}?invite=${selectedCommunity.inviteCode}`;
+                      navigator.clipboard.writeText(url);
+                      alert(`招待リンクをコピーしました！\n${url}`);
+                    }}
+                    className="flex-1 py-3 bg-white text-indigo-600 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+                  >
+                    <i className="fas fa-share-alt"></i> 招待する
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsPosting(true);
+                      setNewPost({ ...newPost, category: 'chokai', area: selectedCommunity.name });
+                    }}
+                    className="flex-1 py-3 bg-indigo-800/50 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-800/70 transition-colors border border-white/10"
+                  >
+                    <i className="fas fa-bullhorn"></i> 回覧板作成
+                  </button>
                 </div>
-              </div>
-
-              {/* 投稿フォーム (コミュニティ用) */}
-              {isPosting && (
-                <div className="bg-white border-2 border-indigo-500 rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-black text-xl text-slate-800 flex items-center gap-2">
-                      <i className="fab fa-line text-[#06C755]"></i> メンバーへ一斉配信
-                    </h3>
-                    <button onClick={() => setIsPosting(false)} className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center"><i className="fas fa-times"></i></button>
-                  </div>
-                  <form onSubmit={(e) => {
-                    // コミュニティ用の投稿ハンドラ
-                    e.preventDefault();
-                    // ... (keep logic)
-                    const kairan = {
-                      id: `k-${Date.now()}`,
-                      title: newPost.title,
-                      content: newPost.content,
-                      area: selectedCommunity.name,
-                      author: user?.nickname || '管理者',
-                      points: 20,
-                      readCount: 0,
-                      isRead: false,
-                      sentToLine: true,
-                      createdAt: new Date().toISOString(),
-                      communityId: selectedCommunity.id
-                    };
-                    setKairanbans([kairan as any, ...kairanbans]);
-                    setIsPosting(false);
-                    setNewPost({ title: '', content: '', category: 'notice', area: '' });
-                    alert(`${selectedCommunity.membersCount}人のLINEに配信しました！`);
-                  }} className="space-y-4">
-                    {/* ... form content ... */}
-                    <p className="text-sm font-bold text-slate-500 bg-slate-50 p-4 rounded-xl">
-                      <i className="fas fa-info-circle mr-2"></i>
-                      「{selectedCommunity.name}」に参加している{selectedCommunity.membersCount}名のLINEに通知が届きます。
-                    </p>
-                    <input type="text" placeholder="タイトル" className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none font-black" value={newPost.title} onChange={e => setNewPost({ ...newPost, title: e.target.value })} />
-                    <textarea placeholder="連絡事項を入力..." className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none min-h-[150px] font-medium" value={newPost.content} onChange={e => setNewPost({ ...newPost, content: e.target.value })} />
-                    <button type="submit" disabled={!newPost.title} className="w-full bg-[#06C755] text-white font-black py-5 rounded-2xl shadow-xl hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 disabled:bg-slate-200">
-                      <i className="fab fa-line text-2xl"></i> 一斉送信
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* タイムライン */}
-              <div className="space-y-4">
-                <h3 className="font-black text-slate-400 text-sm px-4">最近のお知らせ</h3>
-                {/* ... list ... */}
-                {communityKairanbans.length === 0 ? (
-                  <div className="text-center py-12 bg-white rounded-[2rem] border border-slate-100">
-                    <p className="text-slate-400 font-bold">まだお知らせはありません</p>
-                  </div>
-                ) : (
-                  communityKairanbans.map(k => (
-                    <div key={k.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-                      <div className="flex justify-between items-start mb-3">
-                        <h4 className="font-black text-lg text-slate-800">{k.title}</h4>
-                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">{(k as any).sentToLine ? 'LINED' : ''}</span>
-                      </div>
-                      <p className="text-slate-600 font-medium mb-4">{k.content}</p>
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                        <span>{new Date(k.createdAt).toLocaleDateString()}</span>
-                        <span>•</span>
-                        <span>{k.author}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
               </div>
             </div>
-          );
-        }
-        return (
-          <CommunityPanel
-            user={user}
-            myCommunities={myCommunities}
-            onCreateCommunity={(name, desc, isSecret) => {
-              const newComm: Community = {
-                id: `c-${Date.now()}`,
-                name,
-                description: desc,
-                ownerId: user.id,
-                inviteCode: Math.random().toString(36).substring(7),
-                membersCount: 1,
-                isSecret
-              };
-              setMyCommunities([...myCommunities, newComm]);
-            }}
-            onJoinCommunity={(code) => {
-              // モック: コードが合えば参加したことにする
-              const newComm: Community = {
-                id: `c-join-${Date.now()}`,
-                name: '招待されたコミュニティ',
-                description: '招待コード経由で参加しました',
-                ownerId: 'other',
-                inviteCode: code,
-                membersCount: 12,
-                isSecret: false
-              };
-              setMyCommunities([...myCommunities, newComm]);
-              alert('コミュニティに参加しました！');
-            }}
-            onSelectCommunity={setSelectedCommunity}
-          />
-        );
-      case 'feed':
-        // ... (keep feed logic)
-        return (
-          <div className="space-y-6 animate-in fade-in duration-500">
-            {/* ... */}
-            {user.role === 'chokai_leader' && !isPosting && (
-              <div className="bg-emerald-600 rounded-[2rem] p-6 text-white shadow-xl shadow-emerald-200">
-                {/* ... */}
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-                    <i className="fab fa-line text-2xl"></i>
-                  </div>
-                  <div>
-                    <h3 className="font-black">町会長パネル (Push Enabled)</h3>
-                    <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Connected to Supabase Functions</p>
-                  </div>
-                </div>
-                <button onClick={() => setIsPosting(true)} className="w-full bg-white text-emerald-600 font-black py-4 rounded-2xl hover:bg-emerald-50 transition-all flex items-center justify-center gap-2">
-                  <i className="fas fa-bullhorn"></i> LINE一斉通知を送信する
-                </button>
-              </div>
-            )}
-            {/* ... */}
-            {isPosting && user.role === 'chokai_leader' ? (
-              <div className="bg-white border-2 border-emerald-500 rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95">
-                {/* ... form ... */}
+
+            {/* 投稿フォーム (コミュニティ用) */}
+            {isPosting && (
+              <div className="bg-white border-2 border-indigo-500 rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="font-black text-xl text-slate-800 flex items-center gap-2">
-                    <i className="fab fa-line text-[#06C755]"></i> Supabase × LINE Broadcast
+                    <i className="fab fa-line text-[#06C755]"></i> メンバーへ一斉配信
                   </h3>
                   <button onClick={() => setIsPosting(false)} className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center"><i className="fas fa-times"></i></button>
                 </div>
-                <form onSubmit={handleCreateKairanban} className="space-y-4">
-                  <select className="w-full px-5 py-3 bg-slate-50 rounded-2xl outline-none font-bold border border-slate-100" value={newPost.area} onChange={e => setNewPost({ ...newPost, area: e.target.value })}>
-                    <option value="">配信エリアを選択</option>
-                    {selectedAreas.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                  <input type="text" placeholder="配信タイトル" className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none font-black" value={newPost.title} onChange={e => setNewPost({ ...newPost, title: e.target.value })} />
-                  <textarea placeholder="本文を入力..." className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none min-h-[150px] font-medium" value={newPost.content} onChange={e => setNewPost({ ...newPost, content: e.target.value })} />
-                  <button type="submit" disabled={isBroadcasting || !newPost.area || !newPost.title} className="w-full bg-[#06C755] text-white font-black py-5 rounded-2xl shadow-xl hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 disabled:bg-slate-200">
-                    {isBroadcasting ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fab fa-line text-2xl"></i> LINE友だち全員に通知</>}
+                <form onSubmit={(e) => {
+                  // コミュニティ用の投稿ハンドラ
+                  e.preventDefault();
+                  // ... (keep logic)
+                  const kairan = {
+                    id: `k-${Date.now()}`,
+                    title: newPost.title,
+                    content: newPost.content,
+                    area: selectedCommunity.name,
+                    author: user?.nickname || '管理者',
+                    points: 20,
+                    readCount: 0,
+                    isRead: false,
+                    sentToLine: true,
+                    createdAt: new Date().toISOString(),
+                    communityId: selectedCommunity.id
+                  };
+                  setKairanbans([kairan as any, ...kairanbans]);
+                  setIsPosting(false);
+                  setNewPost({ title: '', content: '', category: 'notice', area: '' });
+                  alert(`${selectedCommunity.membersCount}人のLINEに配信しました！`);
+                }} className="space-y-4">
+                  {/* ... form content ... */}
+                  <p className="text-sm font-bold text-slate-500 bg-slate-50 p-4 rounded-xl">
+                    <i className="fas fa-info-circle mr-2"></i>
+                    「{selectedCommunity.name}」に参加している{selectedCommunity.membersCount}名のLINEに通知が届きます。
+                  </p>
+                  <input type="text" placeholder="タイトル" className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none font-black" value={newPost.title} onChange={e => setNewPost({ ...newPost, title: e.target.value })} />
+                  <textarea placeholder="連絡事項を入力..." className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none min-h-[150px] font-medium" value={newPost.content} onChange={e => setNewPost({ ...newPost, content: e.target.value })} />
+                  <button type="submit" disabled={!newPost.title} className="w-full bg-[#06C755] text-white font-black py-5 rounded-2xl shadow-xl hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 disabled:bg-slate-200">
+                    <i className="fab fa-line text-2xl"></i> 一斉送信
                   </button>
                 </form>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {posts.map(post => <PostCard key={post.id} post={post} onLike={() => addScore(2)} />)}
-              </div>
             )}
+
+            {/* タイムライン */}
+            <div className="space-y-4">
+              <h3 className="font-black text-slate-400 text-sm px-4">最近のお知らせ</h3>
+              {/* ... list ... */}
+              {communityKairanbans.length === 0 ? (
+                <div className="text-center py-12 bg-white rounded-[2rem] border border-slate-100">
+                  <p className="text-slate-400 font-bold">まだお知らせはありません</p>
+                </div>
+              ) : (
+                communityKairanbans.map(k => (
+                  <div key={k.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                    <div className="flex justify-between items-start mb-3">
+                      <h4 className="font-black text-lg text-slate-800">{k.title}</h4>
+                      <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">{(k as any).sentToLine ? 'LINED' : ''}</span>
+                    </div>
+                    <p className="text-slate-600 font-medium mb-4">{k.content}</p>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                      <span>{new Date(k.createdAt).toLocaleDateString()}</span>
+                      <span>•</span>
+                      <span>{k.author}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         );
-      case 'chokai':
-        return (
-          <>
-            {isCreatingMission && (
-              <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-                <div className="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl animate-in zoom-in-95">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="font-black text-xl text-slate-800">お手伝いミッション作成</h3>
-                    <button onClick={() => setIsCreatingMission(false)} className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center"><i className="fas fa-times"></i></button>
-                  </div>
-                  <form onSubmit={handleCreateMission} className="space-y-4">
-                    <input type="text" placeholder="ミッション名 (例: 公園の清掃)" required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none font-black" value={newMission.title} onChange={e => setNewMission({ ...newMission, title: e.target.value })} />
-                    <textarea placeholder="内容の詳細..." required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none min-h-[100px] font-medium" value={newMission.description} onChange={e => setNewMission({ ...newMission, description: e.target.value })} />
-                    <div className="grid grid-cols-2 gap-4">
-                      <input type="text" placeholder="開催日 (例: 12/30 10:00)" required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none" value={newMission.date} onChange={e => setNewMission({ ...newMission, date: e.target.value })} />
-                      <input type="number" placeholder="最大人数" required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none" value={newMission.maxParticipants} onChange={e => setNewMission({ ...newMission, maxParticipants: parseInt(e.target.value) })} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <input type="number" placeholder="付与ポイント" required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none" value={newMission.points} onChange={e => setNewMission({ ...newMission, points: parseInt(e.target.value) })} />
-                      <div className="flex items-center justify-center font-bold text-slate-400 bg-slate-50 rounded-2xl">
-                        エリア: {selectedAreas[0]}
-                      </div>
-                    </div>
-                    <button type="submit" className="w-full bg-rose-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-rose-500 transition-all">作成する</button>
-                  </form>
-                </div>
-              </div>
-            )}
-            <ChokaiPanel
-              kairanbans={kairanbans}
-              missions={missions}
-              onReadKairanban={(id, p) => addScore(p)}
-              onJoinMission={handleJoinMission}
-              selectedAreas={selectedAreas}
-              userRole={user?.role}
-              onOpenCreateMission={() => setIsCreatingMission(true)}
-            />
-          </>
-        );
-      case 'coupons':
-        return <CouponList coupons={coupons} currentScore={score} selectedAreas={selectedAreas} />;
-      case 'business':
-        return <BusinessPanel user={user} onRegisterCoupon={handleRegisterCoupon} myCoupons={coupons.filter(c => c.shopName === user.shopName)} />;
-      case 'ai': return <AIChat />;
-      case 'profile':
-        // ... (keep profile logic)
-        return (
-          <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm space-y-8 animate-in slide-in-from-right">
-            {/* ... */}
-            <div className="flex items-center gap-6 mb-8 pb-8 border-b border-slate-100">
-              <img src={user.avatar} className="w-24 h-24 rounded-3xl shadow-lg" alt="avatar" />
-              <div>
-                <h2 className="text-3xl font-black text-slate-800 mb-1">{user.nickname}</h2>
-                <div className="flex gap-2">
-                  <span className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold">住民ランク: {user.level}</span>
-                  <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold">ID: {user.id.substring(0, 8)}</span>
-                </div>
-                <button onClick={() => setIsEditingProfile(true)} className="mt-4 text-emerald-600 text-sm font-bold flex items-center gap-2 hover:underline">
-                  <i className="fas fa-pen"></i> プロフィールを編集
-                </button>
-              </div>
-            </div>
-
-            <h3 className="text-xl font-black text-slate-800">マイエリア設定 (Real-time Sync)</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {SAITAMA_MUNICIPALITIES.map(area => (
-                <button key={area} onClick={() => setSelectedAreas(selectedAreas.includes(area) ? selectedAreas.filter(a => a !== area) : [...selectedAreas, area])} className={`text-[10px] p-2 rounded-xl border font-bold transition-all ${selectedAreas.includes(area) ? 'bg-emerald-50 border-emerald-600 text-emerald-700' : 'bg-white border-slate-200 text-slate-500'}`}>{area}</button>
-              ))}
-            </div>
-
-            <div className="bg-emerald-50 rounded-xl p-4 mb-8 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#06C755] rounded-full flex items-center justify-center text-white text-xl">
-                  <i className="fab fa-line"></i>
+      }
+      return (
+        <CommunityPanel
+          user={user}
+          myCommunities={myCommunities}
+          onCreateCommunity={(name, desc, isSecret) => {
+            const newComm: Community = {
+              id: `c-${Date.now()}`,
+              name,
+              description: desc,
+              ownerId: user.id,
+              inviteCode: Math.random().toString(36).substring(7),
+              membersCount: 1,
+              isSecret
+            };
+            setMyCommunities([...myCommunities, newComm]);
+          }}
+          onJoinCommunity={(code) => {
+            // モック: コードが合えば参加したことにする
+            const newComm: Community = {
+              id: `c-join-${Date.now()}`,
+              name: '招待されたコミュニティ',
+              description: '招待コード経由で参加しました',
+              ownerId: 'other',
+              inviteCode: code,
+              membersCount: 12,
+              isSecret: false
+            };
+            setMyCommunities([...myCommunities, newComm]);
+            alert('コミュニティに参加しました！');
+          }}
+          onSelectCommunity={setSelectedCommunity}
+        />
+      );
+    case 'feed':
+      // ... (keep feed logic)
+      return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+          {/* ... */}
+          {user.role === 'chokai_leader' && !isPosting && (
+            <div className="bg-emerald-600 rounded-[2rem] p-6 text-white shadow-xl shadow-emerald-200">
+              {/* ... */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                  <i className="fab fa-line text-2xl"></i>
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-slate-700">埼玉BASE公式アカウント</p>
-                  <p className="text-[10px] text-slate-500">最新情報やクーポンを受け取る</p>
+                  <h3 className="font-black">町会長パネル (Push Enabled)</h3>
+                  <p className="text-[10px] font-bold opacity-80 uppercase tracking-widest">Connected to Supabase Functions</p>
                 </div>
               </div>
-              <a
-                href="https://line.me/R/ti/p/@saitamabase"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-[#06C755] text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#05b34c] transition-colors"
-              >
-                友だち追加
-              </a>
+              <button onClick={() => setIsPosting(true)} className="w-full bg-white text-emerald-600 font-black py-4 rounded-2xl hover:bg-emerald-50 transition-all flex items-center justify-center gap-2">
+                <i className="fas fa-bullhorn"></i> LINE一斉通知を送信する
+              </button>
             </div>
-
-            <div className="pt-8 border-t border-slate-100">
-              <button
-                onClick={() => {
-                  // Logout logic (mock)
-                  const confirm = window.confirm('ログアウトしますか？');
-                  if (confirm) {
-                    setUser(null);
-                    window.location.href = '/';
-                  }
-                }}
-                className="w-full py-4 bg-slate-100 text-slate-500 font-bold rounded-2xl hover:bg-slate-200 transition-colors"
-              >
-                ログアウト
+          )}
+          {/* ... */}
+          {isPosting && user.role === 'chokai_leader' ? (
+            <div className="bg-white border-2 border-emerald-500 rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95">
+              {/* ... form ... */}
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-black text-xl text-slate-800 flex items-center gap-2">
+                  <i className="fab fa-line text-[#06C755]"></i> Supabase × LINE Broadcast
+                </h3>
+                <button onClick={() => setIsPosting(false)} className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center"><i className="fas fa-times"></i></button>
+              </div>
+              <form onSubmit={handleCreateKairanban} className="space-y-4">
+                <select className="w-full px-5 py-3 bg-slate-50 rounded-2xl outline-none font-bold border border-slate-100" value={newPost.area} onChange={e => setNewPost({ ...newPost, area: e.target.value })}>
+                  <option value="">配信エリアを選択</option>
+                  {selectedAreas.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+                <input type="text" placeholder="配信タイトル" className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none font-black" value={newPost.title} onChange={e => setNewPost({ ...newPost, title: e.target.value })} />
+                <textarea placeholder="本文を入力..." className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none min-h-[150px] font-medium" value={newPost.content} onChange={e => setNewPost({ ...newPost, content: e.target.value })} />
+                <button type="submit" disabled={isBroadcasting || !newPost.area || !newPost.title} className="w-full bg-[#06C755] text-white font-black py-5 rounded-2xl shadow-xl hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 disabled:bg-slate-200">
+                  {isBroadcasting ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fab fa-line text-2xl"></i> LINE友だち全員に通知</>}
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {posts.map(post => <PostCard key={post.id} post={post} onLike={() => addScore(2)} />)}
+            </div>
+          )}
+        </div>
+      );
+    case 'chokai':
+      return (
+        <>
+          {isCreatingMission && (
+            <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+              <div className="bg-white rounded-[2rem] p-8 w-full max-w-lg shadow-2xl animate-in zoom-in-95">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-black text-xl text-slate-800">お手伝いミッション作成</h3>
+                  <button onClick={() => setIsCreatingMission(false)} className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center"><i className="fas fa-times"></i></button>
+                </div>
+                <form onSubmit={handleCreateMission} className="space-y-4">
+                  <input type="text" placeholder="ミッション名 (例: 公園の清掃)" required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none font-black" value={newMission.title} onChange={e => setNewMission({ ...newMission, title: e.target.value })} />
+                  <textarea placeholder="内容の詳細..." required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none min-h-[100px] font-medium" value={newMission.description} onChange={e => setNewMission({ ...newMission, description: e.target.value })} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <input type="text" placeholder="開催日 (例: 12/30 10:00)" required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none" value={newMission.date} onChange={e => setNewMission({ ...newMission, date: e.target.value })} />
+                    <input type="number" placeholder="最大人数" required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none" value={newMission.maxParticipants} onChange={e => setNewMission({ ...newMission, maxParticipants: parseInt(e.target.value) })} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input type="number" placeholder="付与ポイント" required className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none" value={newMission.points} onChange={e => setNewMission({ ...newMission, points: parseInt(e.target.value) })} />
+                    <div className="flex items-center justify-center font-bold text-slate-400 bg-slate-50 rounded-2xl">
+                      エリア: {selectedAreas[0]}
+                    </div>
+                  </div>
+                  <button type="submit" className="w-full bg-rose-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-rose-500 transition-all">作成する</button>
+                </form>
+              </div>
+            </div>
+          )}
+          <ChokaiPanel
+            kairanbans={kairanbans}
+            missions={missions}
+            onReadKairanban={(id, p) => addScore(p)}
+            onJoinMission={handleJoinMission}
+            selectedAreas={selectedAreas}
+            userRole={user?.role}
+            onOpenCreateMission={() => setIsCreatingMission(true)}
+          />
+        </>
+      );
+    case 'coupons':
+      return <CouponList coupons={coupons} currentScore={score} selectedAreas={selectedAreas} />;
+    case 'business':
+      return <BusinessPanel user={user} onRegisterCoupon={handleRegisterCoupon} myCoupons={coupons.filter(c => c.shopName === user.shopName)} />;
+    case 'ai': return <AIChat />;
+    case 'profile':
+      // ... (keep profile logic)
+      return (
+        <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm space-y-8 animate-in slide-in-from-right">
+          {/* ... */}
+          <div className="flex items-center gap-6 mb-8 pb-8 border-b border-slate-100">
+            <img src={user.avatar} className="w-24 h-24 rounded-3xl shadow-lg" alt="avatar" />
+            <div>
+              <h2 className="text-3xl font-black text-slate-800 mb-1">{user.nickname}</h2>
+              <div className="flex gap-2">
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold">住民ランク: {user.level}</span>
+                <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold">ID: {user.id.substring(0, 8)}</span>
+              </div>
+              <button onClick={() => setIsEditingProfile(true)} className="mt-4 text-emerald-600 text-sm font-bold flex items-center gap-2 hover:underline">
+                <i className="fas fa-pen"></i> プロフィールを編集
               </button>
             </div>
           </div>
-        );
-      default: return null;
-    }
-  };
 
-  return (
-    <Layout
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      score={score}
-      selectedAreas={selectedAreas}
-      userRole={user.role}
-      onClickProfile={() => setIsEditingProfile(true)}
-      userNickname={user.nickname}
-      userAvatar={user.avatar}
-    >
-      {showScorePopup.show && (
-        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-10 fade-in duration-500">
-          <div className="bg-slate-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 font-black border-2 border-emerald-500/30">
-            <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xs"><i className="fas fa-plus"></i></div>
-            <span className="tracking-tight">LOCAL SCORE +{showScorePopup.amount}!</span>
+          <h3 className="text-xl font-black text-slate-800">マイエリア設定 (Real-time Sync)</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {SAITAMA_MUNICIPALITIES.map(area => (
+              <button key={area} onClick={() => setSelectedAreas(selectedAreas.includes(area) ? selectedAreas.filter(a => a !== area) : [...selectedAreas, area])} className={`text-[10px] p-2 rounded-xl border font-bold transition-all ${selectedAreas.includes(area) ? 'bg-emerald-50 border-emerald-600 text-emerald-700' : 'bg-white border-slate-200 text-slate-500'}`}>{area}</button>
+            ))}
+          </div>
+
+          <div className="bg-emerald-50 rounded-xl p-4 mb-8 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#06C755] rounded-full flex items-center justify-center text-white text-xl">
+                <i className="fab fa-line"></i>
+              </div>
+              <div>
+                <p className="font-bold text-sm text-slate-700">埼玉BASE公式アカウント</p>
+                <p className="text-[10px] text-slate-500">最新情報やクーポンを受け取る</p>
+              </div>
+            </div>
+            <a
+              href="https://line.me/R/ti/p/@saitamabase"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-[#06C755] text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#05b34c] transition-colors"
+            >
+              友だち追加
+            </a>
+          </div>
+
+          <div className="pt-8 border-t border-slate-100">
+            <button
+              onClick={() => {
+                // Logout logic (mock)
+                const confirm = window.confirm('ログアウトしますか？');
+                if (confirm) {
+                  setUser(null);
+                  window.location.href = '/';
+                }
+              }}
+              className="w-full py-4 bg-slate-100 text-slate-500 font-bold rounded-2xl hover:bg-slate-200 transition-colors"
+            >
+              ログアウト
+            </button>
           </div>
         </div>
-      )}
-      {renderContent()}
-    </Layout>
-  );
+      );
+    default: return null;
+  }
+};
+
+return (
+  <Layout
+    activeTab={activeTab}
+    setActiveTab={setActiveTab}
+    score={score}
+    selectedAreas={selectedAreas}
+    userRole={user.role}
+    onClickProfile={() => setIsEditingProfile(true)}
+    userNickname={user.nickname}
+    userAvatar={user.avatar}
+  >
+    {showScorePopup.show && (
+      <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-10 fade-in duration-500">
+        <div className="bg-slate-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 font-black border-2 border-emerald-500/30">
+          <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center text-white text-xs"><i className="fas fa-plus"></i></div>
+          <span className="tracking-tight">LOCAL SCORE +{showScorePopup.amount}!</span>
+        </div>
+      </div>
+    )}
+    {renderContent()}
+  </Layout>
+);
 };
 
 export default App;
