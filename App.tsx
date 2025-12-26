@@ -365,7 +365,7 @@ const App: React.FC = () => {
     );
   }
 
-  import LandingPage from './components/LandingPage';
+
 
   if (!user) {
     // 公開コミュニティビュー (招待リンク経由)
