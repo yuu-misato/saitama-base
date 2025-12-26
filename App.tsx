@@ -88,7 +88,7 @@ const App: React.FC = () => {
   const LINE_CLIENT_ID = '2008784970';
   const LINE_REDIRECT_URI = window.location.origin; // ローカルなら http://localhost:3000
 
-  const [tempUser, setTempUser] = useState<User | null>(null);
+
 
   // LINEからのコールバック処理
   useEffect(() => {
