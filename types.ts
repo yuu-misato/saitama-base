@@ -80,6 +80,9 @@ export interface Coupon {
   discount: string;
   imageUrl: string;
   area: string; // クーポン対象エリア
+  isUsed: boolean;
+}
+
 export interface Community {
   id: string;
   name: string;
