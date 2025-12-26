@@ -9,7 +9,7 @@ import CommunityPanel from './components/CommunityPanel';
 import BusinessPanel from './components/BusinessPanel';
 import { Post, PostCategory, Coupon, Kairanban, VolunteerMission, User, Community } from './types';
 import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
-import { supabase, getPosts, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity } from './services/supabaseService';
+import { supabase, getPosts, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile } from './services/supabaseService';
 import { summarizeLocalFeed } from './services/geminiService';
 
 import RegistrationModal from './components/RegistrationModal';
@@ -31,16 +31,41 @@ const App: React.FC = () => {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [showScorePopup, setShowScorePopup] = useState<{ show: boolean, amount: number }>({ show: false, amount: 0 });
 
-  // Supabase Auth 状態監視
+  // 永続化ログイン & Supabase Auth 状態監視
   useEffect(() => {
+    // 1. まずローカルストレージを確認 (優先)
+    const storedUserId = localStorage.getItem('saitama_user_id');
+    if (storedUserId) {
+      getProfile(storedUserId).then(({ data, error }) => {
+        if (data && !error) {
+          console.log('Auto-login successful:', data);
+          setUser({
+            id: data.id,
+            nickname: data.nickname,
+            role: data.role as any,
+            avatar: data.avatar_url,
+            score: data.score,
+            level: data.level,
+            selectedAreas: ['さいたま市大宮区'], // DBにエリアがない場合はデフォルト、本来はDB保存推奨
+            isLineConnected: true
+          });
+          return; // 自動ログイン成功ならここで終了
+        } else {
+          // IDはあるがDBにない場合（削除された等）、クリアする
+          localStorage.removeItem('saitama_user_id');
+        }
+      });
+    }
+
+    // 2. Supabase Auth (今回は未使用だが残す)
     supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+      if (session?.user && !storedUserId) {
         // LINEプロファイルからユーザー情報をマッピング
         // 本来は getProfile(session.user.id) でDBから詳細を取得
         setUser({
           id: session.user.id,
           nickname: session.user.user_metadata.full_name || '住民ユーザー',
-          role: 'resident', // デフォルト
+          role: 'resident',
           avatar: session.user.user_metadata.avatar_url || '',
           score: 150,
           level: 2,
@@ -101,6 +126,12 @@ const App: React.FC = () => {
       console.log('LINE Login successful (code received)');
       window.history.replaceState({}, '', window.location.pathname);
 
+      // 既にログイン済みなら何もしない
+      if (localStorage.getItem('saitama_user_id')) {
+        sessionStorage.removeItem('lineLoginState');
+        return;
+      }
+
       const role = sessionStorage.getItem('loginRole') as any || 'resident';
       const newUserId = crypto.randomUUID();
 
@@ -149,6 +180,9 @@ const App: React.FC = () => {
       if (error) console.error('Failed to sync profile', error);
       else console.log('Profile synced to Supabase');
     });
+
+    // 永続化
+    localStorage.setItem('saitama_user_id', finalUser.id);
 
     setUser(finalUser);
     setTempUser(null);
@@ -543,7 +577,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} score={score} selectedAreas={selectedAreas} userRole={user.role} onClickProfile={() => setIsEditingProfile(true)}>
+    <Layout
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      score={score}
+      selectedAreas={selectedAreas}
+      userRole={user.role}
+      onClickProfile={() => setIsEditingProfile(true)}
+      userNickname={user.nickname}
+      userAvatar={user.avatar}
+    >
       {showScorePopup.show && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-10 fade-in duration-500">
           <div className="bg-slate-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 font-black border-2 border-emerald-500/30">

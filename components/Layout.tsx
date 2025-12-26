@@ -9,30 +9,35 @@ interface LayoutProps {
   selectedAreas: string[];
   userRole: 'resident' | 'business' | 'admin' | 'chokai_leader';
   onClickProfile: () => void;
+  userNickname: string;
+  userAvatar: string;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, score, selectedAreas, userRole, onClickProfile }) => {
-  const menuItems = [
-    { id: 'feed', icon: 'fa-home', label: 'タイムライン' },
-    { id: 'chokai', icon: 'fa-building-columns', label: '町会・自治会' },
-    { id: 'community', icon: 'fa-users', label: 'コミュニティ' },
-    { id: 'coupons', icon: 'fa-ticket-alt', label: '地域クーポン' },
-    ...(userRole === 'business' ? [{ id: 'business', icon: 'fa-store', label: 'クーポン管理' }] : []),
-    { id: 'ai', icon: 'fa-robot', label: 'AIアシスタント' },
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, score, selectedAreas, userRole, onClickProfile, userNickname, userAvatar }) => {
+  const MENU_ITEMS = [
+    { id: 'feed', icon: 'fas fa-stream', label: 'タイムライン' },
+    { id: 'community', icon: 'fas fa-users', label: 'コミュニティ' },
+    { id: 'chokai', icon: 'fas fa-clipboard-list', label: '回覧板・活動' },
+    { id: 'coupons', icon: 'fas fa-ticket-alt', label: '地域クーポン' },
+    ...(userRole === 'business' ? [{ id: 'business', icon: 'fas fa-store', label: '事業者管理' }] : []),
+    { id: 'ai', icon: 'fas fa-robot', label: 'AIコンシェルジュ' },
+    { id: 'profile', icon: 'fas fa-cog', label: '設定' },
   ];
 
   const level = Math.floor(score / 100) + 1;
   const progress = (score % 100);
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-200 fixed h-full shadow-sm z-30">
-        <div className="p-8">
-          <h1 className="text-2xl font-black tracking-tight flex items-center gap-2 text-emerald-600">
-            <span className="bg-emerald-600 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-100 italic">S</span>
+      <aside className="hidden md:flex w-64 flex-col fixed h-full bg-white border-r border-slate-200 z-50 shadow-xl shadow-slate-200/50">
+        <div className="p-8 pb-4">
+          <div className="flex items-center gap-3 font-black text-2xl text-slate-800 tracking-tighter cursor-pointer hover:opacity-80 transition-opacity">
+            <div className="w-10 h-10 bg-gradient-to-tr from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
+              <span className="italic">S</span>
+            </div>
             Saitama BASE
-          </h1>
+          </div>
         </div>
 
         {/* Profile Button */}
@@ -41,12 +46,16 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
             onClick={onClickProfile}
             className="w-full bg-slate-50 hover:bg-slate-100 p-4 rounded-2xl flex items-center gap-3 transition-all border border-slate-100 group text-left"
           >
-            <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 group-hover:scale-110 transition-transform overflow-hidden">
-              <i className="fas fa-user"></i>
-            </div>
+            {userAvatar ? (
+              <img src={userAvatar} className="w-10 h-10 rounded-full object-cover border border-slate-200 group-hover:scale-110 transition-transform" alt="avatar" />
+            ) : (
+              <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 group-hover:scale-110 transition-transform overflow-hidden">
+                <i className="fas fa-user"></i>
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-bold text-slate-500 mb-0.5">ログイン中</p>
-              <p className="font-black text-slate-800 truncate text-sm">ユーザー設定</p>
+              <p className="font-black text-slate-800 truncate text-sm">{userNickname || 'ユーザー設定'}</p>
             </div>
             <i className="fas fa-chevron-right text-slate-300 text-xs"></i>
           </button>

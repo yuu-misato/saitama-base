@@ -29,16 +29,25 @@ export const createProfile = async (user: any) => { // Changed User to any for s
 export const createCommunity = async (community: any) => {
   const { data, error } = await supabase
     .from('communities')
-    .insert(community)
-    .select();
+    .insert({
+      name: community.name,
+      description: community.description,
+      owner_id: community.ownerId,
+      image_url: community.imageUrl,
+      is_secret: community.isSecret
+    })
+    .select()
+    .single();
   return { data, error };
 };
 
-export const joinCommunity = async (userId: string, communityId: string) => {
+export const joinCommunity = async (communityId: string, userId: string) => {
   const { data, error } = await supabase
     .from('community_members')
-    .insert({ user_id: userId, community_id: communityId })
-    .select();
+    .insert({
+      community_id: communityId,
+      user_id: userId
+    });
   return { data, error };
 };
 
