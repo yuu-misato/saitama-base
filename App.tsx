@@ -384,27 +384,28 @@ const App: React.FC = () => {
             {/* コミュニティヘッダー */}
             <div className="bg-white rounded-[2.5rem] p-8 shadow-xl text-center border-t-8 border-indigo-500">
               <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4 text-white shadow-lg shadow-indigo-200">
-                <h2 className="text-2xl font-black text-slate-800 mb-2">{publicCommunity.name}</h2>
-                <p className="text-slate-500 text-sm font-bold mb-6">{publicCommunity.description}</p>
-
-                <div className="flex items-center justify-center gap-4 mb-8">
-                  <span className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-black">
-                    <i className="fas fa-users mr-2"></i>{publicCommunity.membersCount}人が参加中
-                  </span>
-                  <span className="bg-emerald-100 text-emerald-600 px-4 py-2 rounded-xl text-xs font-black">
-                    <i className="fas fa-shield-alt mr-2"></i>公式認証済み
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => handleLineLogin('resident')}
-                  className="w-full bg-[#06C755] text-white font-black py-4 rounded-2xl shadow-xl hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 animate-pulse"
-                >
-                  <i className="fab fa-line text-2xl"></i> LINEで参加する
-                </button>
+                {publicCommunity.name[0]}
               </div>
-              <p className="text-[10px] text-slate-400 mt-3 font-bold text-center">LINEアカウントで即座に参加できます</p>
+              <h2 className="text-2xl font-black text-slate-800 mb-2">{publicCommunity.name}</h2>
+              <p className="text-slate-500 text-sm font-bold mb-6">{publicCommunity.description}</p>
+
+              <div className="flex items-center justify-center gap-4 mb-8">
+                <span className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-black">
+                  <i className="fas fa-users mr-2"></i>{publicCommunity.membersCount}人が参加中
+                </span>
+                <span className="bg-emerald-100 text-emerald-600 px-4 py-2 rounded-xl text-xs font-black">
+                  <i className="fas fa-shield-alt mr-2"></i>公式認証済み
+                </span>
+              </div>
+
+              <button
+                onClick={() => handleLineLogin('resident')}
+                className="w-full bg-[#06C755] text-white font-black py-4 rounded-2xl shadow-xl hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 animate-pulse"
+              >
+                <i className="fab fa-line text-2xl"></i> LINEで参加する
+              </button>
             </div>
+            <p className="text-[10px] text-slate-400 mt-3 font-bold text-center">LINEアカウントで即座に参加できます</p>
 
             {/* 公開掲示板プレビュー */}
             <div className="w-full max-w-lg mt-6">
