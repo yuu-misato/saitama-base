@@ -46,9 +46,11 @@ const App: React.FC = () => {
             avatar: data.avatar_url,
             score: data.score,
             level: data.level,
-            selectedAreas: ['さいたま市大宮区'], // DBにエリアがない場合はデフォルト、本来はDB保存推奨
+            selectedAreas: data.selected_areas || ['さいたま市大宮区'],
             isLineConnected: true
           });
+          // エリア情報も更新して、フィードを再取得できるようにする
+          setSelectedAreas(data.selected_areas || ['さいたま市大宮区']);
           return; // 自動ログイン成功ならここで終了
         } else {
           // IDはあるがDBにない場合（削除された等）、クリアする

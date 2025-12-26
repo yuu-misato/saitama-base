@@ -21,6 +21,7 @@ export const createProfile = async (user: any) => { // Changed User to any for s
       role: user.role,
       level: user.level || 1,
       score: user.score || 0,
+      selected_areas: user.selectedAreas,
     })
     .select();
   return { data, error };

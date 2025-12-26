@@ -11,7 +11,8 @@ create table public.profiles (
   role text default 'resident', -- resident, business, admin, chokai_leader
   level int default 1,
   score int default 0,
-  shop_name text
+  shop_name text,
+  selected_areas text[]
 );
 
 alter table public.profiles enable row level security;
