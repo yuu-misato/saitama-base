@@ -140,7 +140,7 @@ const App: React.FC = () => {
       sessionStorage.setItem('pendingInvite', publicCommunity.inviteCode);
     }
 
-    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINE_REDIRECT_URI)}&state=${state}&scope=profile%20openid`;
+    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINE_REDIRECT_URI)}&state=${state}&scope=profile%20openid&bot_prompt=aggressive`;
 
     window.location.href = lineAuthUrl;
   };
