@@ -84,18 +84,19 @@ const App: React.FC = () => {
     if (user) {
       getPosts(selectedAreas).then(({ data }) => {
         if (data) {
-          // Map DB post to UI Post
           const mappedPosts: Post[] = data.map((p: any) => ({
             id: p.id,
+            userId: p.author_id || 'unknown', // Mapped from author_id
+            userName: p.author?.nickname || 'Unknown',
+            userAvatar: p.author?.avatar_url || '', // Include avatar
+            category: p.category,
             title: p.title,
             content: p.content,
-            author: p.author?.nickname || 'Unknown', // Join query result
-            category: p.category,
-            timestamp: new Date(p.created_at).toLocaleDateString(),
-            comments: 0,
-            likes: p.likes,
             area: p.area,
-            imageUrl: p.image_url
+            imageUrl: p.image_url,
+            likes: p.likes,
+            comments: [], // Initialize empty
+            createdAt: p.created_at
           }));
           setPosts(mappedPosts);
         }
@@ -109,13 +110,19 @@ const App: React.FC = () => {
           id: k.id,
           title: k.title,
           content: k.content,
-          date: new Date(k.created_at).toLocaleDateString(),
+          area: k.area || '', // Ensure field exists
           author: k.author,
+          points: k.points || 0,
+          readCount: k.read_count || 0,
           isRead: false,
+          sentToLine: k.sent_to_line || false,
+          createdAt: k.created_at,
+          // UI helper fields
+          date: new Date(k.created_at).toLocaleDateString(),
           category: 'notice',
           communityId: k.community_id
         }));
-        setKairanbans(mappedKairan);
+        setKairanbans(mappedKairan as any); // Cast as any if extra UI props exist
       }
     });
 
@@ -126,12 +133,16 @@ const App: React.FC = () => {
           id: c.id,
           shopName: c.shop_name,
           title: c.title,
-          description: c.description,
-          discountRate: c.discount_rate,
+          description: c.description, // Optional in type?
+          requiredScore: c.required_score || 0,
+          discount: c.discount_rate || c.discount || 'Special',
           imageUrl: c.image_url,
-          area: c.area
+          area: c.area,
+          isUsed: c.is_used || false,
+          // UI helpers
+          discountRate: c.discount_rate
         }));
-        setCoupons(mappedCoupons);
+        setCoupons(mappedCoupons as any);
       }
     });
 
