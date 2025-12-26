@@ -24,7 +24,11 @@ export interface Kairanban {
   readCount: number;
   isRead: boolean;
   createdAt: string;
-  sentToLine: boolean; // LINE配信済みフラグ
+  sentToLine: boolean;
+  // UI helpers
+  date?: string;
+  category?: string;
+  communityId?: string;
 }
 
 export interface VolunteerMission {
@@ -51,6 +55,8 @@ export interface Post {
   likes: number;
   comments: Comment[];
   createdAt: string;
+  // UI helpers
+  timestamp?: string;
 }
 
 export interface Comment {
@@ -79,8 +85,11 @@ export interface Coupon {
   requiredScore: number;
   discount: string;
   imageUrl: string;
-  area: string; // クーポン対象エリア
+  area: string;
   isUsed: boolean;
+  // UI helpers (mapped from discount)
+  discountRate?: string;
+  description?: string;
 }
 
 export interface Community {
