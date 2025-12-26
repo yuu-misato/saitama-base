@@ -120,7 +120,6 @@ const App: React.FC = () => {
           sentToLine: k.sent_to_line || false,
           createdAt: k.created_at,
           // UI helpers
-          date: new Date(k.created_at).toLocaleDateString(),
           category: 'notice',
           communityId: k.community_id
         }));
@@ -288,9 +287,13 @@ const handleCreateKairanban = async (e: React.FormEvent) => {
       id: data[0].id,
       title: data[0].title,
       content: data[0].content,
-      date: new Date(data[0].created_at || Date.now()).toLocaleDateString(),
+      // date removed as it causes type error and is not used
       author: data[0].author,
+      points: data[0].points || 0,
+      readCount: 0,
       isRead: false,
+      sentToLine: data[0].sent_to_line || false,
+      createdAt: data[0].created_at,
       category: 'notice',
       communityId: data[0].community_id
     };
