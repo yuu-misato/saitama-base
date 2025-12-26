@@ -384,55 +384,54 @@ const App: React.FC = () => {
             {/* コミュニティヘッダー */}
             <div className="bg-white rounded-[2.5rem] p-8 shadow-xl text-center border-t-8 border-indigo-500">
               <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4 text-white shadow-lg shadow-indigo-200">
-                {publicCommunity.name[0]}
-              </div>
-              <i className="fab fa-line text-2xl"></i> このコミュニティに参加する
-            </button>
-            <p className="text-[10px] text-slate-400 mt-3 font-bold">LINEアカウントで即座に参加できます</p>
-          </div>
+                <h2 className="text-2xl font-black text-slate-800 mb-2">{publicCommunity.name}</h2>
+                <p className="text-slate-500 text-sm font-bold mb-6">{publicCommunity.description}</p>
 
-          {/* 公開掲示板プレビュー */}
-          <div>
-            <h3 className="text-sm font-black text-slate-400 ml-4 mb-3">📌 最新の回覧板（プレビュー）</h3>
-            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 opacity-80">
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="font-black text-slate-800">今月の資源回収について</h4>
-                <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">3日前</span>
+                <div className="flex items-center justify-center gap-4 mb-8">
+                  <span className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-black">
+                    <i className="fas fa-users mr-2"></i>{publicCommunity.membersCount}人が参加中
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-600 px-4 py-2 rounded-xl text-xs font-black">
+                    <i className="fas fa-shield-alt mr-2"></i>公式認証済み
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => handleLineLogin('resident')}
+                  className="w-full bg-[#06C755] text-white font-black py-4 rounded-2xl shadow-xl hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 animate-pulse"
+                >
+                  <i className="fab fa-line text-2xl"></i> LINEで参加する
+                </button>
               </div>
-              <p className="text-sm text-slate-500 line-clamp-2">今月の資源回収は第3水曜日になります。古紙・ダンボールは...</p>
-              <div className="mt-3 pt-3 border-t border-slate-50 text-center">
-                <span className="text-indigo-600 text-xs font-bold">続きを読むには参加してください</span>
+              <p className="text-[10px] text-slate-400 mt-3 font-bold text-center">LINEアカウントで即座に参加できます</p>
+            </div>
+
+            {/* 公開掲示板プレビュー */}
+            <div className="w-full max-w-lg mt-6">
+              <h3 className="text-sm font-black text-slate-400 ml-4 mb-3">📌 最新の回覧板（プレビュー）</h3>
+              <div className="bg-white rounded-[2rem] p-6 border border-slate-100 opacity-80">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-black text-slate-800">今月の資源回収について</h4>
+                  <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">3日前</span>
+                </div>
+                <p className="text-sm text-slate-500 line-clamp-2">今月の資源回収は第3水曜日になります。古紙・ダンボールは...</p>
+                <div className="mt-3 pt-3 border-t border-slate-50 text-center">
+                  <span className="text-indigo-600 text-xs font-bold">続きを読むには参加してください</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        </div >
-      );
+          );
+    }
+
+          // 通常の未ログイン状態はランディングページを表示
+          return <LandingPage onLogin={() => handleLineLogin('resident')} />;
   }
-
-return (
-  <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-sans">
-    <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-700">
-      <div className="space-y-4">
-        <div className="w-20 h-20 bg-emerald-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-emerald-500/20 italic text-3xl font-black">S</div>
-        <h1 className="text-4xl font-black tracking-tighter">Saitama BASE</h1>
-        <p className="text-slate-400 font-bold leading-relaxed">
-          Amplify × Supabase 高速インフラ稼働中<br />
-          LINE連携で地域に参加しましょう。
-        </p>
-      </div>
-
-      <div className="space-y-3">
-        <button onClick={() => handleLineLogin('resident')} className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-[#06C755]/20">
-          <i className="fab fa-line text-2xl"></i> LINEで今すぐ登録
-        </button>
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={() => handleLineLogin('chokai_leader')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">町会長・自治会</button>
           <button onClick={() => handleLineLogin('business')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">地域事業者</button>
         </div>
-      </div>
-    </div>
-  </div>
+      </div >
+    </div >
+  </div >
 );
 }
 
