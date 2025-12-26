@@ -83,40 +83,41 @@ const App: React.FC = () => {
 
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     // Supabaseを使用したLINE OAuthログイン
-    // LINE連携設定が完了するまで、一時的にモックログインを使用します
-    // const { error } = await supabase.auth.signInWithOAuth({
-    //   provider: 'line' as any,
-    //   options: {
-    //     redirectTo: window.location.origin,
-    //     queryParams: { role } // カスタム属性として渡す例
-    //   }
-    // });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'line' as any,
+      options: {
+        redirectTo: window.location.origin,
+        queryParams: {
+          // prompt: 'consent', // 必要に応じて同意画面を強制
+        }
+      }
+    });
 
-    // if (error) {
-    //   console.error("Login failed:", error.message);
-    // モックログイン（プロトタイプ用）
-    const mockUser: User = {
-      id: `u-${Date.now()}`,
-      nickname: role === 'chokai_leader' ? '大宮三丁目町会長' : role === 'business' ? '大宮盆栽村カフェ店主' : '大宮の住人',
-      role: role,
-      avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${role}`,
-      score: role === 'business' ? 1000 : 150,
-      level: 2,
-      selectedAreas: ['さいたま市大宮区'],
-      isLineConnected: true,
-      shopName: role === 'business' ? '大宮盆栽村カフェ' : undefined
-    };
-    setUser(mockUser);
-    // 自動的にコミュニティに参加させるロジックを入れる場合はここ
-    if (publicCommunity) {
-      setMyCommunities(prev => [...prev, publicCommunity]);
-      setSelectedCommunity(publicCommunity);
-      setActiveTab('community');
-      setPublicCommunity(null); // 公開ビュー終了
+    if (error) {
+      console.error("Login failed:", error.message);
+      // フォールバック：モックログイン（プロトタイプ・開発用）
+      const mockUser: User = {
+        id: `u-${Date.now()}`,
+        nickname: role === 'chokai_leader' ? '大宮三丁目町会長' : role === 'business' ? '大宮盆栽村カフェ店主' : '大宮の住人',
+        role: role,
+        avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${role}`,
+        score: role === 'business' ? 1000 : 150,
+        level: 2,
+        selectedAreas: ['さいたま市大宮区'],
+        isLineConnected: true,
+        shopName: role === 'business' ? '大宮盆栽村カフェ' : undefined
+      };
+      setUser(mockUser);
+      // 自動的にコミュニティに参加させるロジックを入れる場合はここ
+      if (publicCommunity) {
+        setMyCommunities(prev => [...prev, publicCommunity]);
+        setSelectedCommunity(publicCommunity);
+        setActiveTab('community');
+        setPublicCommunity(null); // 公開ビュー終了
+      }
+
+      if (role === 'business') setActiveTab('business');
     }
-
-    if (role === 'business') setActiveTab('business');
-    // }
   };
 
   const addScore = (amount: number) => {

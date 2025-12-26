@@ -60,8 +60,15 @@ View your app in AI Studio: <https://ai.studio/apps/drive/1j2B3vpbU5GIKIXfUSuVG_
    - `GEMINI_API_KEY`: Your Gemini API Key
 6. Click **Save and Deploy**.
 
-7. Install dependencies:
+## LINE Login Setup
+
+1. Create a channel on the [LINE Developers Console](https://developers.line.biz/).
+2. In Supabase Dashboard, go to **Authentication > Providers > LINE**.
+3. Enable LINE provider and enter your `Channel ID` and `Channel Secret`.
+4. Add the **Callback URL** provided by Supabase to your LINE Channel settings under "LINE Login" tab.
+
+5. Install dependencies:
    `npm install`
-8. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-9. Run the app:
+6. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+7. Run the app:
    `npm run dev`
