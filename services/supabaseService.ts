@@ -11,6 +11,40 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 /**
  * 住民・事業者のプロファイル管理
  */
+export const createProfile = async (user: any) => { // Changed User to any for simplicity, assuming type definition is elsewhere
+  const { data, error } = await supabase
+    .from('profiles')
+    .upsert({
+      id: user.id || undefined, // UUIDが自動生成されるか、またはLINE IDをハッシュ化したものを使う
+      nickname: user.nickname,
+      avatar_url: user.avatar,
+      role: user.role,
+      level: user.level || 1,
+      score: user.score || 0,
+    })
+    .select();
+  return { data, error };
+};
+
+export const createCommunity = async (community: any) => {
+  const { data, error } = await supabase
+    .from('communities')
+    .insert(community)
+    .select();
+  return { data, error };
+};
+
+export const joinCommunity = async (userId: string, communityId: string) => {
+  const { data, error } = await supabase
+    .from('community_members')
+    .insert({ user_id: userId, community_id: communityId })
+    .select();
+  return { data, error };
+};
+
+/**
+ * 住民・事業者のプロファイル管理
+ */
 export const getProfile = async (userId: string) => {
   const { data, error } = await supabase
     .from('profiles')

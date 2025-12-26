@@ -4,30 +4,21 @@ create extension if not exists "uuid-ossp";
 -- PROFILES table (Public profiles for users)
 create table public.profiles (
   id uuid references auth.users not null primary key,
+  id uuid primary key, -- removed references auth.users for external auth prototype
+  updated_at timestamp with time zone,
   nickname text,
-  role text check (role in ('resident', 'business', 'admin', 'chokai_leader')) default 'resident',
   avatar_url text,
-  score bigint default 0,
+  role text default 'resident', -- resident, business, admin, chokai_leader
   level int default 1,
-  selected_areas text[],
-  is_line_connected boolean default false,
-  line_id text,
-  shop_name text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+  score int default 0,
+  shop_name text
 );
 
--- Enable Row Level Security (RLS)
 alter table public.profiles enable row level security;
 
--- Create policies for profiles
-create policy "Public profiles are viewable by everyone." on public.profiles
-  for select using (true);
-
-create policy "Users can insert their own profile." on public.profiles
-  for insert with check (auth.uid() = id);
-
-create policy "Users can update own profile." on public.profiles
-  for update using (auth.uid() = id);
+-- PROTOTYPE ONLY: Allow full access to profiles
+create policy "Allow all for patterns" on public.profiles
+  for all using (true) with check (true);
 
 -- POSTS table
 create table public.posts (
@@ -155,11 +146,8 @@ create table public.communities (
 
 alter table public.communities enable row level security;
 
-create policy "Communities are viewable by everyone." on public.communities
-  for select using (true);
-
-create policy "Authenticated users can create communities." on public.communities
-  for insert with check (auth.role() = 'authenticated');
+create policy "Allow all communities" on public.communities
+  for all using (true) with check (true);
 
 -- COMMUNITY MEMBERS table
 create table public.community_members (
@@ -171,9 +159,6 @@ create table public.community_members (
 
 alter table public.community_members enable row level security;
 
-create policy "Members are viewable by everyone." on public.community_members
-  for select using (true);
-
-create policy "Authenticated users can join communities." on public.community_members
-  for insert with check (auth.role() = 'authenticated');
+create policy "Allow all members" on public.community_members
+  for all using (true) with check (true);
 

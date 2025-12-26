@@ -9,7 +9,7 @@ import CommunityPanel from './components/CommunityPanel';
 import BusinessPanel from './components/BusinessPanel';
 import { Post, PostCategory, Coupon, Kairanban, VolunteerMission, User, Community } from './types';
 import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
-import { supabase, getPosts, createKairanbanWithNotification, registerLocalCoupon } from './services/supabaseService';
+import { supabase, getPosts, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity } from './services/supabaseService';
 import { summarizeLocalFeed } from './services/geminiService';
 
 const App: React.FC = () => {
@@ -93,18 +93,16 @@ const App: React.FC = () => {
     const savedState = sessionStorage.getItem('lineLoginState');
 
     if (code && state && savedState && state === savedState) {
-      // LINEログイン成功して戻ってきた
       console.log('LINE Login successful (code received)');
-      window.history.replaceState({}, '', window.location.pathname); // URLをクリーンにする
-
-      // 本来はここでバックエンド経由でアクセストークンを取得し、プロフィールを得る必要がある
-      // 今回はクライアントサイドのみの実装のため、認証成功として扱い、モックユーザーを作成する
-      // (セキュリティ的にはバックエンドでの検証が必要ですが、まずは動作確認のため)
+      window.history.replaceState({}, '', window.location.pathname);
 
       const role = sessionStorage.getItem('loginRole') as any || 'resident';
 
+      // UUIDを生成してDB保存用のIDとする
+      const newUserId = crypto.randomUUID();
+
       const mockUser: User = {
-        id: `u-line-${code.substring(0, 8)}`,
+        id: newUserId,
         nickname: role === 'chokai_leader' ? '大宮三丁目町会長 (LINE)' : role === 'business' ? '大宮盆栽村カフェ店主 (LINE)' : 'LINEユーザー',
         role: role,
         avatar: role === 'business' ? 'https://api.dicebear.com/7.x/bottts/svg?seed=business' : 'https://api.dicebear.com/7.x/avataaars/svg?seed=lineuser',
@@ -114,15 +112,18 @@ const App: React.FC = () => {
         isLineConnected: true
       };
 
+      // DB同期 (非同期で実行し、UIは待たせない)
+      createProfile(mockUser).then(({ error }) => {
+        if (error) console.error('Failed to sync profile', error);
+        else console.log('Profile synced to Supabase');
+      });
+
       setUser(mockUser);
       sessionStorage.removeItem('lineLoginState');
       sessionStorage.removeItem('loginRole');
 
-      // コミュニティ招待の処理
       const pendingInvite = sessionStorage.getItem('pendingInvite');
       if (pendingInvite) {
-        // ここで公開コミュニティ情報を再取得するロジックが必要だが、
-        // 簡易的に招待モードを維持
         alert('LINEログイン完了！コミュニティに参加しました。');
         sessionStorage.removeItem('pendingInvite');
       }
