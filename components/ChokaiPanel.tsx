@@ -1,6 +1,5 @@
 
-import React from 'react';
-import { Kairanban, VolunteerMission } from '../types';
+import { Kairanban, VolunteerMission, User } from '../types';
 
 interface ChokaiPanelProps {
   kairanbans: Kairanban[];
@@ -8,9 +7,11 @@ interface ChokaiPanelProps {
   onReadKairanban: (id: string, points: number) => void;
   onJoinMission: (id: string, points: number) => void;
   selectedAreas: string[];
+  userRole?: 'resident' | 'business' | 'admin' | 'chokai_leader';
+  onOpenCreateMission?: () => void;
 }
 
-const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadKairanban, onJoinMission, selectedAreas }) => {
+const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadKairanban, onJoinMission, selectedAreas, userRole, onOpenCreateMission }) => {
   const filteredKairanbans = kairanbans.filter(k => selectedAreas.includes(k.area));
   const filteredMissions = missions.filter(m => selectedAreas.includes(m.area));
 
@@ -56,7 +57,7 @@ const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadK
                   <i className="fas fa-eye mr-1"></i> {k.readCount}人が確認済み
                 </div>
                 {!k.isRead ? (
-                  <button 
+                  <button
                     onClick={() => onReadKairanban(k.id, k.points)}
                     className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-black text-xs hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-95"
                   >
@@ -79,14 +80,24 @@ const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadK
 
       {/* Volunteer Missions Section */}
       <section>
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 bg-rose-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200">
-            <i className="fas fa-handshake-angle"></i>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-rose-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-200">
+              <i className="fas fa-handshake-angle"></i>
+            </div>
+            <div>
+              <h3 className="text-xl font-black text-slate-800">地域お手伝いミッション</h3>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Local Missions</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-black text-slate-800">地域お手伝いミッション</h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Local Missions</p>
-          </div>
+          {(userRole === 'admin' || userRole === 'chokai_leader') && onOpenCreateMission && (
+            <button
+              onClick={onOpenCreateMission}
+              className="bg-rose-600 text-white px-4 py-2 rounded-xl font-bold text-xs hover:bg-rose-700 transition-all shadow-lg shadow-rose-200 flex items-center gap-2"
+            >
+              <i className="fas fa-plus"></i> 追加
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -108,7 +119,7 @@ const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadK
                   <div className="bg-rose-500 h-full transition-all duration-1000" style={{ width: `${(m.currentParticipants / m.maxParticipants) * 100}%` }}></div>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => onJoinMission(m.id, m.points)}
                 disabled={m.currentParticipants >= m.maxParticipants}
                 className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm hover:bg-rose-600 transition-all shadow-xl active:scale-95 disabled:bg-slate-200"
