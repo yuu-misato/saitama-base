@@ -14,6 +14,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
   const menuItems = [
     { id: 'feed', icon: 'fa-home', label: 'タイムライン' },
     { id: 'chokai', icon: 'fa-building-columns', label: '町会・自治会' },
+    { id: 'community', icon: 'fa-users', label: 'コミュニティ' },
     { id: 'coupons', icon: 'fa-ticket-alt', label: '地域クーポン' },
     ...(userRole === 'business' ? [{ id: 'business', icon: 'fa-store', label: 'クーポン管理' }] : []),
     { id: 'ai', icon: 'fa-robot', label: 'AIアシスタント' },
@@ -46,8 +47,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
               </div>
             </div>
             <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-              <div 
-                className="bg-emerald-500 h-full transition-all duration-1000" 
+              <div
+                className="bg-emerald-500 h-full transition-all duration-1000"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -59,11 +60,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center gap-4 px-8 py-4 transition-all ${
-                activeTab === item.id 
-                  ? 'bg-emerald-50/50 text-emerald-700 border-r-4 border-emerald-600 font-black' 
+              className={`w-full flex items-center gap-4 px-8 py-4 transition-all ${activeTab === item.id
+                  ? 'bg-emerald-50/50 text-emerald-700 border-r-4 border-emerald-600 font-black'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-              }`}
+                }`}
             >
               <i className={`fas ${item.icon} w-5 text-lg ${activeTab === item.id ? 'text-emerald-600' : 'text-slate-400'}`}></i>
               <span className="text-sm">{item.label}</span>
@@ -71,11 +71,10 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
           ))}
           <button
             onClick={() => setActiveTab('profile')}
-            className={`w-full flex items-center gap-4 px-8 py-4 transition-all ${
-              activeTab === 'profile' 
-                ? 'bg-emerald-50/50 text-emerald-700 border-r-4 border-emerald-600 font-black' 
+            className={`w-full flex items-center gap-4 px-8 py-4 transition-all ${activeTab === 'profile'
+                ? 'bg-emerald-50/50 text-emerald-700 border-r-4 border-emerald-600 font-black'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-            }`}
+              }`}
           >
             <i className={`fas fa-cog w-5 text-lg ${activeTab === 'profile' ? 'text-emerald-600' : 'text-slate-400'}`}></i>
             <span className="text-sm">エリア設定</span>
@@ -85,7 +84,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
         <div className="p-6 border-t border-slate-100">
           <div className="flex items-center gap-3 p-2">
             <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center">
-               <i className="fas fa-user-secret text-slate-400"></i>
+              <i className="fas fa-user-secret text-slate-400"></i>
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-black text-slate-900 truncate">ゲストユーザー</p>
@@ -99,19 +98,19 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
       <main className="flex-1 md:ml-72 pb-20 md:pb-0">
         <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-xl border-b border-slate-200 px-6 py-4 flex items-center justify-between">
           <div>
-             <h2 className="text-lg font-black text-slate-800 tracking-tight">
-               {activeTab === 'profile' ? '設定' : (menuItems.find(i => i.id === activeTab)?.label || 'ホーム')}
-             </h2>
-             <div className="flex gap-1 mt-0.5">
-               {selectedAreas.slice(0, 1).map(area => (
-                 <span key={area} className="text-[10px] text-emerald-600 font-bold">{area}中心</span>
-               ))}
-             </div>
+            <h2 className="text-lg font-black text-slate-800 tracking-tight">
+              {activeTab === 'profile' ? '設定' : (menuItems.find(i => i.id === activeTab)?.label || 'ホーム')}
+            </h2>
+            <div className="flex gap-1 mt-0.5">
+              {selectedAreas.slice(0, 1).map(area => (
+                <span key={area} className="text-[10px] text-emerald-600 font-bold">{area}中心</span>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="bg-slate-100 px-3 py-1.5 rounded-full flex items-center gap-2">
-               <i className="fas fa-coins text-amber-500 text-xs"></i>
-               <span className="text-xs font-bold text-slate-700">{score}</span>
+              <i className="fas fa-coins text-amber-500 text-xs"></i>
+              <span className="text-xs font-bold text-slate-700">{score}</span>
             </div>
           </div>
         </header>
@@ -126,9 +125,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
           <button
             key={item.id}
             onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center justify-center py-2 flex-1 transition-all ${
-              activeTab === item.id ? 'text-emerald-600' : 'text-slate-400'
-            }`}
+            className={`flex flex-col items-center justify-center py-2 flex-1 transition-all ${activeTab === item.id ? 'text-emerald-600' : 'text-slate-400'
+              }`}
           >
             <i className={`fas ${item.icon} text-lg`}></i>
             <span className="text-[9px] mt-1 font-black">{item.label}</span>

@@ -80,5 +80,19 @@ export interface Coupon {
   discount: string;
   imageUrl: string;
   area: string; // クーポン対象エリア
-  isUsed: boolean;
+export interface Community {
+  id: string;
+  name: string;
+  description: string;
+  ownerId: string;
+  inviteCode: string; // URLシェア用
+  membersCount: number;
+  imageUrl?: string;
 }
+
+export interface CommunityMember {
+  communityId: string;
+  userId: string;
+  joinedAt: string;
+}
+

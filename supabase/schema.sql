@@ -142,4 +142,38 @@ create trigger on_auth_user_created
 -- Storage buckets handling (optional, uncomment if needed)
 -- insert into storage.buckets (id, name) values ('post-images', 'post-images');
 -- create policy "Public Access" on storage.objects for select using ( bucket_id = 'post-images' );
--- create policy "Auth Upload" on storage.objects for insert with check ( bucket_id = 'post-images' and auth.role() = 'authenticated' );
+-- COMMUNITIES table
+create table public.communities (
+  id uuid default uuid_generate_v4() primary key,
+  name text not null,
+  description text,
+  owner_id uuid references public.profiles(id) not null,
+  invite_code text unique default substr(md5(random()::text), 0, 8),
+  image_url text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.communities enable row level security;
+
+create policy "Communities are viewable by everyone." on public.communities
+  for select using (true);
+
+create policy "Authenticated users can create communities." on public.communities
+  for insert with check (auth.role() = 'authenticated');
+
+-- COMMUNITY MEMBERS table
+create table public.community_members (
+  community_id uuid references public.communities(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  joined_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  primary key (community_id, user_id)
+);
+
+alter table public.community_members enable row level security;
+
+create policy "Members are viewable by everyone." on public.community_members
+  for select using (true);
+
+create policy "Authenticated users can join communities." on public.community_members
+  for insert with check (auth.role() = 'authenticated');
+

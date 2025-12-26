@@ -5,8 +5,9 @@ import PostCard from './components/PostCard';
 import AIChat from './components/AIChat';
 import CouponList from './components/CouponList';
 import ChokaiPanel from './components/ChokaiPanel';
+import CommunityPanel from './components/CommunityPanel';
 import BusinessPanel from './components/BusinessPanel';
-import { Post, PostCategory, Coupon, Kairanban, VolunteerMission, User } from './types';
+import { Post, PostCategory, Coupon, Kairanban, VolunteerMission, User, Community } from './types';
 import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
 import { supabase, getPosts, createKairanbanWithNotification, registerLocalCoupon } from './services/supabaseService';
 import { summarizeLocalFeed } from './services/geminiService';
@@ -18,6 +19,8 @@ const App: React.FC = () => {
   const [kairanbans, setKairanbans] = useState<Kairanban[]>(MOCK_KAIRANBAN);
   const [missions, setMissions] = useState<VolunteerMission[]>(MOCK_MISSIONS);
   const [coupons, setCoupons] = useState<Coupon[]>(MOCK_COUPONS);
+  const [myCommunities, setMyCommunities] = useState<Community[]>([]);
+  const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null);
   const [score, setScore] = useState(150);
   const [selectedAreas, setSelectedAreas] = useState<string[]>(['さいたま市大宮区']);
   const [isPosting, setIsPosting] = useState(false);
@@ -155,6 +158,151 @@ const App: React.FC = () => {
   // 残りのレンダリングロジックは以前と同様
   const renderContent = () => {
     switch (activeTab) {
+      case 'community':
+        if (selectedCommunity) {
+          // コミュニティ詳細画面
+          const communityKairanbans = kairanbans.filter(k => (k as any).communityId === selectedCommunity.id);
+
+          return (
+            <div className="space-y-6 animate-in slide-in-from-right duration-300">
+              {/* ヘッダー */}
+              <div className="bg-indigo-600 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden">
+                <button
+                  onClick={() => setSelectedCommunity(null)}
+                  className="absolute top-6 left-6 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors backdrop-blur-sm"
+                >
+                  <i className="fas fa-arrow-left"></i>
+                </button>
+                <div className="mt-8">
+                  <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-[10px] font-black tracking-widest mb-2 backdrop-blur-sm">VIP COMMUNITY</span>
+                  <h2 className="text-3xl font-black mb-2">{selectedCommunity.name}</h2>
+                  <p className="opacity-80 font-bold text-sm mb-6">{selectedCommunity.description}</p>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        const url = `${window.location.origin}?invite=${selectedCommunity.inviteCode}`;
+                        navigator.clipboard.writeText(url);
+                        alert(`招待リンクをコピーしました！\n${url}`);
+                      }}
+                      className="flex-1 py-3 bg-white text-indigo-600 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+                    >
+                      <i className="fas fa-share-alt"></i> 招待する
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsPosting(true);
+                        setNewPost({ ...newPost, category: 'chokai', area: selectedCommunity.name });
+                      }}
+                      className="flex-1 py-3 bg-indigo-800/50 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-800/70 transition-colors border border-white/10"
+                    >
+                      <i className="fas fa-bullhorn"></i> 回覧板作成
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 投稿フォーム (コミュニティ用) */}
+              {isPosting && (
+                <div className="bg-white border-2 border-indigo-500 rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-black text-xl text-slate-800 flex items-center gap-2">
+                      <i className="fab fa-line text-[#06C755]"></i> メンバーへ一斉配信
+                    </h3>
+                    <button onClick={() => setIsPosting(false)} className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center"><i className="fas fa-times"></i></button>
+                  </div>
+                  <form onSubmit={(e) => {
+                    // コミュニティ用の投稿ハンドラ
+                    e.preventDefault();
+                    const kairan = {
+                      id: `k-${Date.now()}`,
+                      title: newPost.title,
+                      content: newPost.content,
+                      area: selectedCommunity.name,
+                      author: user?.nickname || '管理者',
+                      points: 20,
+                      readCount: 0,
+                      isRead: false,
+                      sentToLine: true,
+                      createdAt: new Date().toISOString(),
+                      communityId: selectedCommunity.id // 拡張フィールド
+                    };
+                    setKairanbans([kairan as any, ...kairanbans]);
+                    setIsPosting(false);
+                    setNewPost({ title: '', content: '', category: 'notice', area: '' });
+                    alert(`${selectedCommunity.membersCount}人のLINEに配信しました！`);
+                  }} className="space-y-4">
+                    <p className="text-sm font-bold text-slate-500 bg-slate-50 p-4 rounded-xl">
+                      <i className="fas fa-info-circle mr-2"></i>
+                      「{selectedCommunity.name}」に参加している{selectedCommunity.membersCount}名のLINEに通知が届きます。
+                    </p>
+                    <input type="text" placeholder="タイトル" className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none font-black" value={newPost.title} onChange={e => setNewPost({ ...newPost, title: e.target.value })} />
+                    <textarea placeholder="連絡事項を入力..." className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none min-h-[150px] font-medium" value={newPost.content} onChange={e => setNewPost({ ...newPost, content: e.target.value })} />
+                    <button type="submit" disabled={!newPost.title} className="w-full bg-[#06C755] text-white font-black py-5 rounded-2xl shadow-xl hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 disabled:bg-slate-200">
+                      <i className="fab fa-line text-2xl"></i> 一斉送信
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* タイムライン */}
+              <div className="space-y-4">
+                <h3 className="font-black text-slate-400 text-sm px-4">最近のお知らせ</h3>
+                {communityKairanbans.length === 0 ? (
+                  <div className="text-center py-12 bg-white rounded-[2rem] border border-slate-100">
+                    <p className="text-slate-400 font-bold">まだお知らせはありません</p>
+                  </div>
+                ) : (
+                  communityKairanbans.map(k => (
+                    <div key={k.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                      <div className="flex justify-between items-start mb-3">
+                        <h4 className="font-black text-lg text-slate-800">{k.title}</h4>
+                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded-lg">{(k as any).sentToLine ? 'LINED' : ''}</span>
+                      </div>
+                      <p className="text-slate-600 font-medium mb-4">{k.content}</p>
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
+                        <span>{new Date(k.createdAt).toLocaleDateString()}</span>
+                        <span>•</span>
+                        <span>{k.author}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          );
+        }
+        return (
+          <CommunityPanel
+            user={user}
+            myCommunities={myCommunities}
+            onCreateCommunity={(name, desc) => {
+              const newComm: Community = {
+                id: `c-${Date.now()}`,
+                name,
+                description: desc,
+                ownerId: user.id,
+                inviteCode: Math.random().toString(36).substring(7),
+                membersCount: 1
+              };
+              setMyCommunities([...myCommunities, newComm]);
+            }}
+            onJoinCommunity={(code) => {
+              // モック: コードが合えば参加したことにする
+              const newComm: Community = {
+                id: `c-join-${Date.now()}`,
+                name: '招待されたコミュニティ',
+                description: '招待コード経由で参加しました',
+                ownerId: 'other',
+                inviteCode: code,
+                membersCount: 12
+              };
+              setMyCommunities([...myCommunities, newComm]);
+              alert('コミュニティに参加しました！');
+            }}
+            onSelectCommunity={setSelectedCommunity}
+          />
+        );
       case 'feed':
         return (
           <div className="space-y-6 animate-in fade-in duration-500">
