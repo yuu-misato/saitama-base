@@ -152,3 +152,54 @@ export const registerLocalCoupon = async (coupon: any) => {
     .select();
   return { data, error };
 };
+
+/**
+ * 地域お手伝いミッションの取得
+ */
+export const getMissions = async () => {
+  const { data, error } = await supabase
+    .from('volunteer_missions')
+    .select('*')
+    .order('created_at', { ascending: false });
+  return { data, error };
+};
+
+/**
+ * 地域お手伝いミッションの作成
+ */
+export const createMission = async (mission: any) => {
+  const { data, error } = await supabase
+    .from('volunteer_missions')
+    .insert([{
+      title: mission.title,
+      description: mission.description,
+      points: mission.points,
+      area: mission.area,
+      date: mission.date,
+      max_participants: mission.maxParticipants
+    }])
+    .select();
+  return { data, error };
+};
+
+/**
+ * ミッションに参加（カウントアップのみの簡易実装）
+ */
+export const joinMission = async (missionId: string) => {
+  // Note: 本来的には transaction または rpc を使うべき
+  const { data: current } = await supabase
+    .from('volunteer_missions')
+    .select('current_participants')
+    .eq('id', missionId)
+    .single();
+
+  if (current) {
+    const { data, error } = await supabase
+      .from('volunteer_missions')
+      .update({ current_participants: (current.current_participants || 0) + 1 })
+      .eq('id', missionId)
+      .select();
+    return { data, error };
+  }
+  return { data: null, error: 'Mission not found' };
+};

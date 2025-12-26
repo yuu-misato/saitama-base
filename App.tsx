@@ -1,4 +1,4 @@
-```
+
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import PostCard from './components/PostCard';
@@ -291,149 +291,149 @@ const App: React.FC = () => {
 
     const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINE_REDIRECT_URI)}&state=${state}&scope=profile%20openid&bot_prompt=aggressive`;
 
-window.location.href = lineAuthUrl;
+    window.location.href = lineAuthUrl;
   };
 
-const addScore = (amount: number) => {
-  setScore(prev => prev + amount);
-  setShowScorePopup({ show: true, amount });
-  setTimeout(() => setShowScorePopup({ show: false, amount: 0 }), 2000);
-};
-
-const handleCreateKairanban = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsBroadcasting(true);
-
-  const kairanPayload = {
-    title: newPost.title,
-    content: newPost.content,
-    area: newPost.area,
-    author: user?.nickname,
-    sent_to_line: true,
-    communityId: selectedCommunity?.id
+  const addScore = (amount: number) => {
+    setScore(prev => prev + amount);
+    setShowScorePopup({ show: true, amount });
+    setTimeout(() => setShowScorePopup({ show: false, amount: 0 }), 2000);
   };
 
-  const { data, error } = await createKairanbanWithNotification(kairanPayload);
+  const handleCreateKairanban = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsBroadcasting(true);
 
-  if (!error && data && data.length > 0) {
-    const newKairan: Kairanban = {
-      id: data[0].id,
-      title: data[0].title,
-      content: data[0].content,
-      // date removed as it causes type error and is not used
-      author: data[0].author,
-      points: data[0].points || 0,
-      readCount: 0,
-      isRead: false,
-      sentToLine: data[0].sent_to_line || false,
-      createdAt: data[0].created_at,
-      category: 'notice',
-      communityId: data[0].community_id
+    const kairanPayload = {
+      title: newPost.title,
+      content: newPost.content,
+      area: newPost.area,
+      author: user?.nickname,
+      sent_to_line: true,
+      communityId: selectedCommunity?.id
     };
-    setKairanbans([newKairan, ...kairanbans]);
-    addScore(50);
-    setIsPosting(false);
-    setNewPost({ title: '', content: '', category: 'notice', area: '' });
-  }
-  setIsBroadcasting(false);
-};
 
-const handleRegisterCoupon = async (coupon: Coupon) => {
-  const { data, error } = await registerLocalCoupon(coupon);
-  if (!error && data) {
-    const newCoupon = { ...coupon, id: data[0].id }; // ID from DB
-    setCoupons([newCoupon, ...coupons]);
-    addScore(100);
-  }
-};
+    const { data, error } = await createKairanbanWithNotification(kairanPayload);
 
-if (tempUser) {
-  return (
-    <RegistrationModal
-      initialNickname={tempUser.nickname}
-      onRegister={handleRegistrationComplete}
-    />
-  );
-}
+    if (!error && data && data.length > 0) {
+      const newKairan: Kairanban = {
+        id: data[0].id,
+        title: data[0].title,
+        content: data[0].content,
+        // date removed as it causes type error and is not used
+        author: data[0].author,
+        points: data[0].points || 0,
+        readCount: 0,
+        isRead: false,
+        sentToLine: data[0].sent_to_line || false,
+        createdAt: data[0].created_at,
+        category: 'notice',
+        communityId: data[0].community_id
+      };
+      setKairanbans([newKairan, ...kairanbans]);
+      addScore(50);
+      setIsPosting(false);
+      setNewPost({ title: '', content: '', category: 'notice', area: '' });
+    }
+    setIsBroadcasting(false);
+  };
 
-if (isEditingProfile && user) {
-  return (
-    <RegistrationModal
-      initialNickname={user.nickname}
-      onRegister={handleRegistrationComplete}
-    />
-  );
-}
+  const handleRegisterCoupon = async (coupon: Coupon) => {
+    const { data, error } = await registerLocalCoupon(coupon);
+    if (!error && data) {
+      const newCoupon = { ...coupon, id: data[0].id }; // ID from DB
+      setCoupons([newCoupon, ...coupons]);
+      addScore(100);
+    }
+  };
 
-import LandingPage from './components/LandingPage';
-
-if (!user) {
-  // 公開コミュニティビュー (招待リンク経由)
-  if (publicCommunity) {
+  if (tempUser) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center p-6 font-sans">
-        <header className="w-full max-w-lg flex items-center justify-between mb-8">
-          <div className="flex items-center gap-2 font-black text-indigo-600">
-            <span className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center">S</span>
-            Saitama BASE
-          </div>
-          <button onClick={() => setPublicCommunity(null)} className="text-xs font-bold text-slate-400">ログイン</button>
-        </header>
+      <RegistrationModal
+        initialNickname={tempUser.nickname}
+        onRegister={handleRegistrationComplete}
+      />
+    );
+  }
 
-        <div className="w-full max-w-lg space-y-6">
-          {/* コミュニティヘッダー */}
-          <div className="bg-white rounded-[2.5rem] p-8 shadow-xl text-center border-t-8 border-indigo-500">
-            <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4 text-white shadow-lg shadow-indigo-200">
-              {publicCommunity.name[0]}
-            </div>
-            <i className="fab fa-line text-2xl"></i> このコミュニティに参加する
-          </button>
-          <p className="text-[10px] text-slate-400 mt-3 font-bold">LINEアカウントで即座に参加できます</p>
-        </div>
+  if (isEditingProfile && user) {
+    return (
+      <RegistrationModal
+        initialNickname={user.nickname}
+        onRegister={handleRegistrationComplete}
+      />
+    );
+  }
 
-        {/* 公開掲示板プレビュー */}
-        <div>
-          <h3 className="text-sm font-black text-slate-400 ml-4 mb-3">📌 最新の回覧板（プレビュー）</h3>
-          <div className="bg-white rounded-[2rem] p-6 border border-slate-100 opacity-80">
-            <div className="flex justify-between items-start mb-2">
-              <h4 className="font-black text-slate-800">今月の資源回収について</h4>
-              <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">3日前</span>
+  import LandingPage from './components/LandingPage';
+
+  if (!user) {
+    // 公開コミュニティビュー (招待リンク経由)
+    if (publicCommunity) {
+      return (
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center p-6 font-sans">
+          <header className="w-full max-w-lg flex items-center justify-between mb-8">
+            <div className="flex items-center gap-2 font-black text-indigo-600">
+              <span className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center">S</span>
+              Saitama BASE
             </div>
-            <p className="text-sm text-slate-500 line-clamp-2">今月の資源回収は第3水曜日になります。古紙・ダンボールは...</p>
-            <div className="mt-3 pt-3 border-t border-slate-50 text-center">
-              <span className="text-indigo-600 text-xs font-bold">続きを読むには参加してください</span>
+            <button onClick={() => setPublicCommunity(null)} className="text-xs font-bold text-slate-400">ログイン</button>
+          </header>
+
+          <div className="w-full max-w-lg space-y-6">
+            {/* コミュニティヘッダー */}
+            <div className="bg-white rounded-[2.5rem] p-8 shadow-xl text-center border-t-8 border-indigo-500">
+              <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4 text-white shadow-lg shadow-indigo-200">
+                {publicCommunity.name[0]}
+              </div>
+              <i className="fab fa-line text-2xl"></i> このコミュニティに参加する
+            </button>
+            <p className="text-[10px] text-slate-400 mt-3 font-bold">LINEアカウントで即座に参加できます</p>
+          </div>
+
+          {/* 公開掲示板プレビュー */}
+          <div>
+            <h3 className="text-sm font-black text-slate-400 ml-4 mb-3">📌 最新の回覧板（プレビュー）</h3>
+            <div className="bg-white rounded-[2rem] p-6 border border-slate-100 opacity-80">
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="font-black text-slate-800">今月の資源回収について</h4>
+                <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">3日前</span>
+              </div>
+              <p className="text-sm text-slate-500 line-clamp-2">今月の資源回収は第3水曜日になります。古紙・ダンボールは...</p>
+              <div className="mt-3 pt-3 border-t border-slate-50 text-center">
+                <span className="text-indigo-600 text-xs font-bold">続きを読むには参加してください</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
         </div >
       );
   }
 
-  return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-sans">
-      <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-700">
-        <div className="space-y-4">
-          <div className="w-20 h-20 bg-emerald-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-emerald-500/20 italic text-3xl font-black">S</div>
-          <h1 className="text-4xl font-black tracking-tighter">Saitama BASE</h1>
-          <p className="text-slate-400 font-bold leading-relaxed">
-            Amplify × Supabase 高速インフラ稼働中<br />
-            LINE連携で地域に参加しましょう。
-          </p>
-        </div>
+return (
+  <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-sans">
+    <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-700">
+      <div className="space-y-4">
+        <div className="w-20 h-20 bg-emerald-500 rounded-3xl mx-auto flex items-center justify-center shadow-2xl shadow-emerald-500/20 italic text-3xl font-black">S</div>
+        <h1 className="text-4xl font-black tracking-tighter">Saitama BASE</h1>
+        <p className="text-slate-400 font-bold leading-relaxed">
+          Amplify × Supabase 高速インフラ稼働中<br />
+          LINE連携で地域に参加しましょう。
+        </p>
+      </div>
 
-        <div className="space-y-3">
-          <button onClick={() => handleLineLogin('resident')} className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-[#06C755]/20">
-            <i className="fab fa-line text-2xl"></i> LINEで今すぐ登録
-          </button>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => handleLineLogin('chokai_leader')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">町会長・自治会</button>
-            <button onClick={() => handleLineLogin('business')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">地域事業者</button>
-          </div>
+      <div className="space-y-3">
+        <button onClick={() => handleLineLogin('resident')} className="w-full bg-[#06C755] hover:bg-[#05b34c] text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-[#06C755]/20">
+          <i className="fab fa-line text-2xl"></i> LINEで今すぐ登録
+        </button>
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => handleLineLogin('chokai_leader')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">町会長・自治会</button>
+          <button onClick={() => handleLineLogin('business')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-[10px] transition-all">地域事業者</button>
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 const handleCreateMission = async (e: React.FormEvent) => {
