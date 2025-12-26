@@ -12,8 +12,11 @@ import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, IN
 import { supabase, getPosts, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity } from './services/supabaseService';
 import { summarizeLocalFeed } from './services/geminiService';
 
+import RegistrationModal from './components/RegistrationModal';
+
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [tempUser, setTempUser] = useState<User | null>(null); // 新規登録用一時ステート
   const [activeTab, setActiveTab] = useState('feed');
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [kairanbans, setKairanbans] = useState<Kairanban[]>(MOCK_KAIRANBAN);
@@ -85,6 +88,8 @@ const App: React.FC = () => {
   const LINE_CLIENT_ID = '2008784970';
   const LINE_REDIRECT_URI = window.location.origin; // ローカルなら http://localhost:3000
 
+  const [tempUser, setTempUser] = useState<User | null>(null);
+
   // LINEからのコールバック処理
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -97,13 +102,12 @@ const App: React.FC = () => {
       window.history.replaceState({}, '', window.location.pathname);
 
       const role = sessionStorage.getItem('loginRole') as any || 'resident';
-
-      // UUIDを生成してDB保存用のIDとする
       const newUserId = crypto.randomUUID();
 
-      const mockUser: User = {
+      // LINEからの基本情報のみセットした仮ユーザー
+      const initialUser: User = {
         id: newUserId,
-        nickname: role === 'chokai_leader' ? '大宮三丁目町会長 (LINE)' : role === 'business' ? '大宮盆栽村カフェ店主 (LINE)' : 'LINEユーザー',
+        nickname: role === 'business' ? '店名未設定' : 'ゲスト', // デフォルト名
         role: role,
         avatar: role === 'business' ? 'https://api.dicebear.com/7.x/bottts/svg?seed=business' : 'https://api.dicebear.com/7.x/avataaars/svg?seed=lineuser',
         score: 150,
@@ -112,23 +116,37 @@ const App: React.FC = () => {
         isLineConnected: true
       };
 
-      // DB同期 (非同期で実行し、UIは待たせない)
-      createProfile(mockUser).then(({ error }) => {
-        if (error) console.error('Failed to sync profile', error);
-        else console.log('Profile synced to Supabase');
-      });
-
-      setUser(mockUser);
+      setTempUser(initialUser); // 登録モーダルを表示させるための一時保存
       sessionStorage.removeItem('lineLoginState');
       sessionStorage.removeItem('loginRole');
-
-      const pendingInvite = sessionStorage.getItem('pendingInvite');
-      if (pendingInvite) {
-        alert('LINEログイン完了！コミュニティに参加しました。');
-        sessionStorage.removeItem('pendingInvite');
-      }
     }
   }, []);
+
+  const handleRegistrationComplete = (nickname: string, areas: string[]) => {
+    if (!tempUser) return;
+
+    const finalUser = {
+      ...tempUser,
+      nickname,
+      selectedAreas: areas
+    };
+
+    // DB同期
+    createProfile(finalUser).then(({ error }) => {
+      if (error) console.error('Failed to sync profile', error);
+      else console.log('Profile synced to Supabase');
+    });
+
+    setUser(finalUser);
+    setTempUser(null);
+
+    // コミュニティ招待の処理
+    const pendingInvite = sessionStorage.getItem('pendingInvite');
+    if (pendingInvite) {
+      alert('登録完了！コミュニティに参加しました。');
+      sessionStorage.removeItem('pendingInvite');
+    }
+  };
 
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     // LINE OAuth 2.1 Authorize URLの構築
@@ -184,6 +202,15 @@ const App: React.FC = () => {
       addScore(100);
     }
   };
+
+  if (tempUser) {
+    return (
+      <RegistrationModal
+        initialNickname={tempUser.nickname}
+        onRegister={handleRegistrationComplete}
+      />
+    );
+  }
 
   if (!user) {
     // 公開コミュニティビュー (招待リンク経由)
