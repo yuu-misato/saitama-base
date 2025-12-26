@@ -190,7 +190,7 @@ const App: React.FC = () => {
   }, []);
 
   // LINEログイン設定 (Supabase Providerが見つからないための直接実装)
-  const LINE_CLIENT_ID = '2008784970';
+  const LINE_CLIENT_ID = '2008785654'; // Provided by User
   const LINE_REDIRECT_URI = window.location.origin; // ローカルなら http://localhost:3000
 
 
