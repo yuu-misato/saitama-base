@@ -14,7 +14,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, score, selectedAreas, userRole, onClickProfile, userNickname, userAvatar }) => {
-  const MENU_ITEMS = [
+  const menuItems = [
     { id: 'feed', icon: 'fas fa-stream', label: 'タイムライン' },
     { id: 'community', icon: 'fas fa-users', label: 'コミュニティ' },
     { id: 'chokai', icon: 'fas fa-clipboard-list', label: '回覧板・活動' },
