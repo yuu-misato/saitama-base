@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // AWS Amplifyの環境変数を想定
 // 実際の設定は Amplify Console の Environment variables で行います
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -47,7 +47,7 @@ export const createKairanbanWithNotification = async (kairan: any) => {
   if (!error && kairan.sent_to_line) {
     console.log("Supabase Edge Functions triggered for LINE broadcast...");
   }
-  
+
   return { data, error };
 };
 
