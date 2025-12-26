@@ -7,10 +7,11 @@ interface LayoutProps {
   setActiveTab: (tab: string) => void;
   score: number;
   selectedAreas: string[];
-  userRole?: string;
+  userRole: 'resident' | 'business' | 'admin' | 'chokai_leader';
+  onClickProfile: () => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, score, selectedAreas, userRole }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, score, selectedAreas, userRole, onClickProfile }) => {
   const menuItems = [
     { id: 'feed', icon: 'fa-home', label: 'タイムライン' },
     { id: 'chokai', icon: 'fa-building-columns', label: '町会・自治会' },
@@ -32,6 +33,23 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
             <span className="bg-emerald-600 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-100 italic">S</span>
             Saitama BASE
           </h1>
+        </div>
+
+        {/* Profile Button */}
+        <div className="px-6 mb-6">
+          <button
+            onClick={onClickProfile}
+            className="w-full bg-slate-50 hover:bg-slate-100 p-4 rounded-2xl flex items-center gap-3 transition-all border border-slate-100 group text-left"
+          >
+            <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 group-hover:scale-110 transition-transform overflow-hidden">
+              <i className="fas fa-user"></i>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-slate-500 mb-0.5">ログイン中</p>
+              <p className="font-black text-slate-800 truncate text-sm">ユーザー設定</p>
+            </div>
+            <i className="fas fa-chevron-right text-slate-300 text-xs"></i>
+          </button>
         </div>
 
         {/* Score Widget */}
@@ -61,8 +79,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
               key={item.id}
               onClick={() => setActiveTab(item.id)}
               className={`w-full flex items-center gap-4 px-8 py-4 transition-all ${activeTab === item.id
-                  ? 'bg-emerald-50/50 text-emerald-700 border-r-4 border-emerald-600 font-black'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                ? 'bg-emerald-50/50 text-emerald-700 border-r-4 border-emerald-600 font-black'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                 }`}
             >
               <i className={`fas ${item.icon} w-5 text-lg ${activeTab === item.id ? 'text-emerald-600' : 'text-slate-400'}`}></i>
@@ -72,8 +90,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
           <button
             onClick={() => setActiveTab('profile')}
             className={`w-full flex items-center gap-4 px-8 py-4 transition-all ${activeTab === 'profile'
-                ? 'bg-emerald-50/50 text-emerald-700 border-r-4 border-emerald-600 font-black'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+              ? 'bg-emerald-50/50 text-emerald-700 border-r-4 border-emerald-600 font-black'
+              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
               }`}
           >
             <i className={`fas fa-cog w-5 text-lg ${activeTab === 'profile' ? 'text-emerald-600' : 'text-slate-400'}`}></i>

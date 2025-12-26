@@ -123,6 +123,19 @@ const App: React.FC = () => {
   }, []);
 
   const handleRegistrationComplete = (nickname: string, areas: string[]) => {
+    // 既存ユーザーの編集モード
+    if (isEditingProfile && user) {
+      const updatedUser = { ...user, nickname, selectedAreas: areas };
+      createProfile(updatedUser).then(({ error }) => {
+        if (error) console.error('Failed to update profile', error);
+      });
+      setUser(updatedUser);
+      setIsEditingProfile(false);
+      alert('プロフィールを更新しました');
+      return;
+    }
+
+    // 新規登録モード
     if (!tempUser) return;
 
     const finalUser = {
@@ -147,6 +160,8 @@ const App: React.FC = () => {
       sessionStorage.removeItem('pendingInvite');
     }
   };
+
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     // LINE OAuth 2.1 Authorize URLの構築
@@ -207,6 +222,15 @@ const App: React.FC = () => {
     return (
       <RegistrationModal
         initialNickname={tempUser.nickname}
+        onRegister={handleRegistrationComplete}
+      />
+    );
+  }
+
+  if (isEditingProfile && user) {
+    return (
+      <RegistrationModal
+        initialNickname={user.nickname}
         onRegister={handleRegistrationComplete}
       />
     );
@@ -491,8 +515,22 @@ const App: React.FC = () => {
       case 'ai': return <AIChat />;
       case 'profile':
         return (
-          <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm space-y-8">
-            <h3 className="text-2xl font-black text-slate-800">マイエリア設定 (Real-time Sync)</h3>
+          <div className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm space-y-8 animate-in slide-in-from-right">
+            <div className="flex items-center gap-6 mb-8 pb-8 border-b border-slate-100">
+              <img src={user.avatar} className="w-24 h-24 rounded-3xl shadow-lg" alt="avatar" />
+              <div>
+                <h2 className="text-3xl font-black text-slate-800 mb-1">{user.nickname}</h2>
+                <div className="flex gap-2">
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-bold">住民ランク: {user.level}</span>
+                  <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-xs font-bold">ID: {user.id.substring(0, 8)}</span>
+                </div>
+                <button onClick={() => setIsEditingProfile(true)} className="mt-4 text-emerald-600 text-sm font-bold flex items-center gap-2 hover:underline">
+                  <i className="fas fa-pen"></i> プロフィールを編集
+                </button>
+              </div>
+            </div>
+
+            <h3 className="text-xl font-black text-slate-800">マイエリア設定 (Real-time Sync)</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {SAITAMA_MUNICIPALITIES.map(area => (
                 <button key={area} onClick={() => setSelectedAreas(selectedAreas.includes(area) ? selectedAreas.filter(a => a !== area) : [...selectedAreas, area])} className={`text-[10px] p-2 rounded-xl border font-bold transition-all ${selectedAreas.includes(area) ? 'bg-emerald-50 border-emerald-600 text-emerald-700' : 'bg-white border-slate-200 text-slate-500'}`}>{area}</button>
@@ -505,7 +543,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout activeTab={activeTab} setActiveTab={setActiveTab} score={score} selectedAreas={selectedAreas} userRole={user.role}>
+    <Layout activeTab={activeTab} setActiveTab={setActiveTab} score={score} selectedAreas={selectedAreas} userRole={user.role} onClickProfile={() => setIsEditingProfile(true)}>
       {showScorePopup.show && (
         <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-10 fade-in duration-500">
           <div className="bg-slate-900 text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-3 font-black border-2 border-emerald-500/30">
