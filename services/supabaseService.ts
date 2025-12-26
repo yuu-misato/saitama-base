@@ -66,11 +66,36 @@ export const getProfile = async (userId: string) => {
 /**
  * タイムライン投稿の取得
  */
+/**
+ * タイムライン投稿の取得
+ */
 export const getPosts = async (areas: string[]) => {
   const { data, error } = await supabase
     .from('posts')
-    .select('*')
+    .select('*, author:profiles(nickname, avatar_url)')
     .in('area', areas)
+    .order('created_at', { ascending: false });
+  return { data, error };
+};
+
+/**
+ * タイムライン投稿の作成
+ */
+export const createPost = async (post: any) => {
+  const { data, error } = await supabase
+    .from('posts')
+    .insert(post)
+    .select();
+  return { data, error };
+};
+
+/**
+ * 回覧板の取得
+ */
+export const getKairanbans = async () => {
+  const { data, error } = await supabase
+    .from('kairanbans')
+    .select('*')
     .order('created_at', { ascending: false });
   return { data, error };
 };
@@ -82,15 +107,30 @@ export const createKairanbanWithNotification = async (kairan: any) => {
   // 1. 回覧板データを挿入
   const { data, error } = await supabase
     .from('kairanbans')
-    .insert([kairan])
+    .insert([{
+      title: kairan.title,
+      content: kairan.content,
+      area: kairan.area,
+      author: kairan.author,
+      sent_to_line: kairan.sent_to_line,
+      community_id: kairan.communityId || null
+    }])
     .select();
 
-  // 2. LINE Messaging APIへのトリガー（Edge Functions または Lambda を想定）
-  // ここではDBのWebhook機能を活用する設計を推奨します
   if (!error && kairan.sent_to_line) {
     console.log("Supabase Edge Functions triggered for LINE broadcast...");
   }
 
+  return { data, error };
+};
+
+/**
+ * 地域クーポン取得
+ */
+export const getCoupons = async () => {
+  const { data, error } = await supabase
+    .from('coupons')
+    .select('*');
   return { data, error };
 };
 
@@ -100,7 +140,14 @@ export const createKairanbanWithNotification = async (kairan: any) => {
 export const registerLocalCoupon = async (coupon: any) => {
   const { data, error } = await supabase
     .from('coupons')
-    .insert([coupon])
+    .insert([{
+      shop_name: coupon.shopName,
+      title: coupon.title,
+      description: coupon.description,
+      discount_rate: coupon.discountRate,
+      area: coupon.area,
+      image_url: coupon.imageUrl
+    }])
     .select();
   return { data, error };
 };

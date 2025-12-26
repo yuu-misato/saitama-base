@@ -9,7 +9,7 @@ import CommunityPanel from './components/CommunityPanel';
 import BusinessPanel from './components/BusinessPanel';
 import { Post, PostCategory, Coupon, Kairanban, VolunteerMission, User, Community } from './types';
 import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
-import { supabase, getPosts, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile } from './services/supabaseService';
+import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons } from './services/supabaseService';
 import { summarizeLocalFeed } from './services/geminiService';
 
 import RegistrationModal from './components/RegistrationModal';
@@ -18,10 +18,10 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [tempUser, setTempUser] = useState<User | null>(null); // 新規登録用一時ステート
   const [activeTab, setActiveTab] = useState('feed');
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
-  const [kairanbans, setKairanbans] = useState<Kairanban[]>(MOCK_KAIRANBAN);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [kairanbans, setKairanbans] = useState<Kairanban[]>([]);
   const [missions, setMissions] = useState<VolunteerMission[]>(MOCK_MISSIONS);
-  const [coupons, setCoupons] = useState<Coupon[]>(MOCK_COUPONS);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [myCommunities, setMyCommunities] = useState<Community[]>([]);
   const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null);
   const [score, setScore] = useState(150);
@@ -76,15 +76,63 @@ const App: React.FC = () => {
     });
   }, []);
 
-  // 実データのフェッチ（エリア変更時など）
+  // 実データのフェッチ（全ての共通データ）
   useEffect(() => {
+    // 1. Posts fetch
     if (user) {
-      const fetchData = async () => {
-        const { data } = await getPosts(selectedAreas);
-        if (data) setPosts(data as any);
-      };
-      fetchData();
+      getPosts(selectedAreas).then(({ data }) => {
+        if (data) {
+          // Map DB post to UI Post
+          const mappedPosts: Post[] = data.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            content: p.content,
+            author: p.author?.nickname || 'Unknown', // Join query result
+            category: p.category,
+            timestamp: new Date(p.created_at).toLocaleDateString(),
+            comments: 0,
+            likes: p.likes,
+            area: p.area,
+            imageUrl: p.image_url
+          }));
+          setPosts(mappedPosts);
+        }
+      });
     }
+
+    // 2. Kairanbans fetch
+    getKairanbans().then(({ data }) => {
+      if (data) {
+        const mappedKairan: Kairanban[] = data.map((k: any) => ({
+          id: k.id,
+          title: k.title,
+          content: k.content,
+          date: new Date(k.created_at).toLocaleDateString(),
+          author: k.author,
+          isRead: false,
+          category: 'notice',
+          communityId: k.community_id
+        }));
+        setKairanbans(mappedKairan);
+      }
+    });
+
+    // 3. Coupons fetch
+    getCoupons().then(({ data }) => {
+      if (data) {
+        const mappedCoupons: Coupon[] = data.map((c: any) => ({
+          id: c.id,
+          shopName: c.shop_name,
+          title: c.title,
+          description: c.description,
+          discountRate: c.discount_rate,
+          imageUrl: c.image_url,
+          area: c.area
+        }));
+        setCoupons(mappedCoupons);
+      }
+    });
+
   }, [selectedAreas, user]);
 
   const [publicCommunity, setPublicCommunity] = useState<Community | null>(null);
@@ -223,20 +271,29 @@ const App: React.FC = () => {
     e.preventDefault();
     setIsBroadcasting(true);
 
-    const kairan = {
+    const kairanPayload = {
       title: newPost.title,
       content: newPost.content,
       area: newPost.area,
       author: user?.nickname,
-      points: 20,
       sent_to_line: true,
-      created_at: new Date().toISOString()
+      communityId: selectedCommunity?.id
     };
 
-    const { data, error } = await createKairanbanWithNotification(kairan);
+    const { data, error } = await createKairanbanWithNotification(kairanPayload);
 
     if (!error && data && data.length > 0) {
-      setKairanbans([{ ...kairan, id: data[0].id, readCount: 0, isRead: false, sentToLine: true } as any, ...kairanbans]);
+      const newKairan: Kairanban = {
+        id: data[0].id,
+        title: data[0].title,
+        content: data[0].content,
+        date: new Date(data[0].created_at || Date.now()).toLocaleDateString(),
+        author: data[0].author,
+        isRead: false,
+        category: 'notice',
+        communityId: data[0].community_id
+      };
+      setKairanbans([newKairan, ...kairanbans]);
       addScore(50);
       setIsPosting(false);
       setNewPost({ title: '', content: '', category: 'notice', area: '' });
@@ -245,9 +302,10 @@ const App: React.FC = () => {
   };
 
   const handleRegisterCoupon = async (coupon: Coupon) => {
-    const { error } = await registerLocalCoupon(coupon);
-    if (!error) {
-      setCoupons([coupon, ...coupons]);
+    const { data, error } = await registerLocalCoupon(coupon);
+    if (!error && data) {
+      const newCoupon = { ...coupon, id: data[0].id }; // ID from DB
+      setCoupons([newCoupon, ...coupons]);
       addScore(100);
     }
   };
