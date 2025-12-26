@@ -114,8 +114,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
               <i className="fas fa-user-secret text-slate-400"></i>
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-black text-slate-900 truncate">ゲストユーザー</p>
-              <p className="text-[9px] text-emerald-600 font-black tracking-widest uppercase">{userRole === 'business' ? 'Business Account' : 'Anonymous Mode'}</p>
+              <p className="text-sm font-black text-slate-900 truncate">{userNickname || 'ゲストユーザー'}</p>
+              <p className="text-[9px] text-emerald-600 font-black tracking-widest uppercase">
+                {userRole === 'business' ? 'Business Account' :
+                  userRole === 'chokai_leader' ? 'Leader Account' :
+                    userRole === 'admin' ? 'Admin Account' : 'Resident Account'}
+              </p>
             </div>
           </div>
         </div>
