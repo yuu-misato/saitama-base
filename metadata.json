@@ -1,0 +1,8 @@
+{
+  "name": "Saitama BASE",
+  "description": "LINE連携必須。町会長が全住民にプッシュ通知を送れる、埼玉県特化の次世代型ローカルSNS。",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
