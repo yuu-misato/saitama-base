@@ -96,16 +96,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
               <span className="text-sm">{item.label}</span>
             </button>
           ))}
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`w-full flex items-center gap-4 px-8 py-4 transition-all ${activeTab === 'profile'
-              ? 'bg-emerald-50/50 text-emerald-700 border-r-4 border-emerald-600 font-black'
-              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-              }`}
-          >
-            <i className={`fas fa-cog w-5 text-lg ${activeTab === 'profile' ? 'text-emerald-600' : 'text-slate-400'}`}></i>
-            <span className="text-sm">エリア設定</span>
-          </button>
+
         </nav>
 
         <div className="p-6 border-t border-slate-100">
