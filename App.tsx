@@ -193,177 +193,109 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // LINEログイン設定 (Supabase Providerが見つからないための直接実装)
-  const LINE_CLIENT_ID = '2008784970'; // Corrected Channel ID
-  const LINE_REDIRECT_URI = window.location.origin; // ローカルなら http://localhost:3000
+  // LINEログイン (Supabase Auth)
+  const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
+    localStorage.setItem('loginRole', role);
 
+    // 事前登録フローの場合はpendingRegistrationが既にセットされている前提
 
-
-  // LINEからのコールバック処理
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const state = params.get('state');
-    // Using localStorage for better mobile persistence
-    const savedState = localStorage.getItem('lineLoginState');
-
-    if (code && state && savedState && state === savedState) {
-      console.log('LINE Login successful (code received)');
-      window.history.replaceState({}, '', window.location.pathname);
-
-      // 既にログイン済みなら何もしない
-      if (localStorage.getItem('saitama_user_id')) {
-        localStorage.removeItem('lineLoginState');
-        return;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'line',
+      options: {
+        redirectTo: window.location.origin,
+        scopes: 'profile openid',
       }
+    });
 
-      const role = localStorage.getItem('loginRole') as any || 'resident';
-      const newUserId = crypto.randomUUID();
+    if (error) {
+      console.error('Login error:', error);
+      addToast('ログインに失敗しました: ' + error.message, 'error');
+    }
+  };
 
-      // 事前入力情報の確認
-      const pendingRegStr = localStorage.getItem('pendingRegistration');
-      const pendingReg = pendingRegStr ? JSON.parse(pendingRegStr) : null;
+  // Auth State Monitoring & Profile Sync
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        console.log('Signed in via Supabase Auth:', session.user.id);
 
-      // LINEからの基本情報
-      const initialUser: User = {
-        id: newUserId,
-        nickname: pendingReg?.nickname || (role === 'business' ? '店名未設定' : 'ゲスト'),
-        role: role,
-        avatar: role === 'business' ? 'https://api.dicebear.com/7.x/bottts/svg?seed=business' : 'https://api.dicebear.com/7.x/avataaars/svg?seed=lineuser',
-        score: 150,
-        level: 2,
-        selectedAreas: pendingReg?.areas || ['さいたま市大宮区'],
-        isLineConnected: true
-      };
+        // 既にローカルステートがある場合はスキップ（二重処理防止）
+        if (user && user.id === session.user.id) return;
 
-      if (pendingReg) {
-        // 事前入力がある場合は即座に登録完了とする
-        createProfile(initialUser).then(({ error }) => {
-          if (error) console.error('Failed to sync profile', error);
-        });
-        localStorage.setItem('saitama_user_id', initialUser.id);
-        setUser(initialUser);
+        const role = localStorage.getItem('loginRole') as any || 'resident';
+
+        // 事前入力情報の確認
+        const pendingRegStr = localStorage.getItem('pendingRegistration');
+        const pendingReg = pendingRegStr ? JSON.parse(pendingRegStr) : null;
+
+        // 既存プロフィール取得
+        const { data: existingProfile } = await getProfile(session.user.id);
+
+        let finalUser: User;
+
+        if (existingProfile) {
+          // 既存ユーザー: プロフィール情報を優先
+          console.log('Existing profile found:', existingProfile);
+          finalUser = {
+            id: existingProfile.id,
+            nickname: existingProfile.nickname,
+            role: existingProfile.role as any,
+            avatar: existingProfile.avatar_url,
+            score: existingProfile.score,
+            level: existingProfile.level,
+            selectedAreas: existingProfile.selected_areas || ['さいたま市大宮区'],
+            isLineConnected: true
+          };
+
+          // もし事前登録情報があって、かつ既存プロフィールと違う場合は更新する？
+          // 今回は「既存ユーザーならログイン」という要望なので、あえて上書きしない、
+          // もしくはユーザーに確認するフローがベストだが、
+          // ここでは「既存情報優先」として、pendingRegistrationは破棄する（重複登録防止）
+          if (pendingReg) {
+            addToast(`おかえりなさい、${existingProfile.nickname}さん！`, 'success');
+            localStorage.removeItem('pendingRegistration');
+          }
+
+        } else {
+          // 新規ユーザー (またはSupabaseにプロフィールがない)
+          console.log('Creating new profile for:', session.user.id);
+          finalUser = {
+            id: session.user.id,
+            nickname: pendingReg?.nickname || (role === 'business' ? '店名未設定' : 'ゲスト'),
+            role: role,
+            avatar: session.user.user_metadata.avatar_url || (role === 'business' ? 'https://api.dicebear.com/7.x/bottts/svg?seed=business' : 'https://api.dicebear.com/7.x/avataaars/svg?seed=lineuser'),
+            score: 150,
+            level: 1,
+            selectedAreas: pendingReg?.areas || ['さいたま市大宮区'],
+            isLineConnected: true
+          };
+
+          // プロフィール作成
+          await createProfile(finalUser);
+          if (pendingReg) {
+            addToast('登録が完了しました！', 'success');
+            localStorage.removeItem('pendingRegistration');
+          }
+        }
 
         // コミュニティ招待の処理
         const pendingInvite = localStorage.getItem('pendingInvite');
         if (pendingInvite) {
-          addToast('登録完了！コミュニティに参加しました。', 'success');
+          addToast('コミュニティに参加しました。', 'success');
           localStorage.removeItem('pendingInvite');
-        } else {
-          addToast('登録が完了しました！', 'success');
         }
 
-        localStorage.removeItem('pendingRegistration');
-      } else {
-        // 事前入力がない場合は確認モーダルへ（既存フロー維持）
-        setTempUser(initialUser);
+        localStorage.setItem('saitama_user_id', finalUser.id);
+        setUser(finalUser);
+        localStorage.removeItem('loginRole');
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        localStorage.removeItem('saitama_user_id');
       }
-
-      localStorage.removeItem('lineLoginState');
-      localStorage.removeItem('loginRole');
-    }
-  }, []);
-
-  const handleRegistrationComplete = (nickname: string, areas: string[]) => {
-    // 既存ユーザーの編集モード
-    if (isEditingProfile && user) {
-      const updatedUser = { ...user, nickname, selectedAreas: areas };
-      createProfile(updatedUser).then(({ error }) => {
-        if (error) console.error('Failed to update profile', error);
-      });
-      setUser(updatedUser);
-      setIsEditingProfile(false);
-      addToast('プロフィールを更新しました', 'success');
-      return;
-    }
-
-    // 新規登録モード
-    if (!tempUser) return;
-
-    const finalUser = {
-      ...tempUser,
-      nickname,
-      selectedAreas: areas
-    };
-
-    // DB同期
-    createProfile(finalUser).then(({ error }) => {
-      if (error) console.error('Failed to sync profile', error);
-      else console.log('Profile synced to Supabase');
     });
 
-    // 永続化
-    localStorage.setItem('saitama_user_id', finalUser.id);
-
-    setUser(finalUser);
-    setTempUser(null);
-
-    // コミュニティ招待の処理
-    const pendingInvite = localStorage.getItem('pendingInvite');
-    if (pendingInvite) {
-      addToast('登録完了！コミュニティに参加しました。', 'success');
-      localStorage.removeItem('pendingInvite');
-    }
-  };
-
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-
-  const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
-    // 1. Redirect URIの動的生成
-    // 【Final Robust Fix】
-    // ローカル環境: ポート番号が可変(5173, 5174...)なため、window.location.origin を使用
-    // 本番環境: 登録済みURLと完全一致させるため、ハードコード
-    const isLocal = window.location.hostname === 'localhost';
-    const redirectUri = isLocal
-      ? window.location.origin
-      : 'https://main.d27038hwihhfay.amplifyapp.com';
-
-    // ユーザー協力用デバッグログ
-    console.log(`
-    ============= LINE LOGIN DEBUG =============
-    Current Env: ${isLocal ? 'Localhost' : 'Production'}
-    Sent Redirect URI: ${redirectUri}
-    Current Browser URL: ${window.location.href}
-    ============================================
-    `);
-
-    if (isLocal) {
-      addToast(`Debug: Redirect URI is ${redirectUri}`, 'info');
-    }
-
-    // デバッグ用: ユーザーに現在のURIを確認してもらう（本番で問題が解決したら削除）
-    // alert(`LINE Login Debug:\nRedirect URI: ${redirectUri}`);
-    console.log('🔗 LINE Login Redirect URI (Hardcoded):', redirectUri);
-
-    // LINE OAuth 2.1 Authorize URLの構築
-    const state = Math.random().toString(36).substring(7);
-    const nonce = Math.random().toString(36).substring(7); // OpenID Connect用
-
-    localStorage.setItem('lineLoginState', state); // Switched to localStorage
-    localStorage.setItem('loginRole', role);       // Switched to localStorage
-
-    // コミュニティ招待中なら保存
-    if (publicCommunity) {
-      localStorage.setItem('pendingInvite', publicCommunity.inviteCode); // Switched
-    }
-
-    // URL構築
-    console.log('Using Redirect URI for params:', redirectUri); // DEBUG
-    const params = new URLSearchParams({
-      response_type: 'code',
-      client_id: LINE_CLIENT_ID,
-      redirect_uri: redirectUri, // エンコードはURLSearchParamsが自動で行う
-      state: state,
-      scope: 'profile openid',
-      bot_prompt: 'aggressive', // 友だち追加を促す
-      nonce: nonce
-    });
-
-    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?${params.toString()}`;
-
-    console.log('🚀 Redirecting to LINE Auth:', lineAuthUrl);
-    window.location.href = lineAuthUrl;
-  };
+    return () => subscription.unsubscribe();
+  }, [user]);
 
   // 事前登録フロー（情報入力 -> LINE認証）
   const handlePreRegister = (nickname: string, areas: string[]) => {
