@@ -765,9 +765,10 @@ const App: React.FC = () => {
             <div className="pt-8 border-t border-slate-100">
               <button
                 onClick={() => {
-                  // Logout logic (mock)
                   const confirm = window.confirm('ログアウトしますか？');
                   if (confirm) {
+                    localStorage.removeItem('saitama_user_id');
+                    sessionStorage.clear();
                     setUser(null);
                     window.location.href = '/';
                   }
