@@ -673,53 +673,127 @@ const App: React.FC = () => {
               </div>
             )}
             {/* ... */}
-            {isPosting && user.role === 'chokai_leader' ? (
-              <div className="bg-white border-2 border-emerald-500 rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95">
-                {/* ... form ... */}
+            {/* General Post Creation Button */}
+            {!isPosting && (
+              <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex items-center gap-4 mb-6 cursor-pointer hover:bg-slate-50 transition-colors" onClick={() => setIsPosting(true)}>
+                <img src={user.avatar} className="w-10 h-10 rounded-full border border-slate-200" alt="avatar" />
+                <div className="flex-1 bg-slate-100 h-10 rounded-full flex items-center px-4 text-slate-400 font-bold text-sm">
+                  地域の出来事をシェアしよう...
+                </div>
+                <button className="w-10 h-10 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center hover:bg-indigo-100 transition-colors">
+                  <i className="fas fa-image"></i>
+                </button>
+              </div>
+            )}
+
+            {/* General Post Creation Modal */}
+            {isPosting && (
+              <div className="bg-white border-2 border-indigo-500 rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 mb-8">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="font-black text-xl text-slate-800 flex items-center gap-2">
-                    <i className="fab fa-line text-[#06C755]"></i> Supabase × LINE Broadcast
+                    <i className="fas fa-pen-fancy text-indigo-500"></i> 投稿を作成
                   </h3>
-                  <button onClick={() => setIsPosting(false)} className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center"><i className="fas fa-times"></i></button>
+                  <button onClick={() => setIsPosting(false)} className="w-8 h-8 rounded-full bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-200"><i className="fas fa-times"></i></button>
                 </div>
-                <form onSubmit={handleCreateKairanban} className="space-y-4">
-                  <select className="w-full px-5 py-3 bg-slate-50 rounded-2xl outline-none font-bold border border-slate-100" value={newPost.area} onChange={e => setNewPost({ ...newPost, area: e.target.value })}>
-                    <option value="">配信エリアを選択</option>
-                    {selectedAreas.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                  <input type="text" placeholder="配信タイトル" className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none font-black" value={newPost.title} onChange={e => setNewPost({ ...newPost, title: e.target.value })} />
-                  <textarea placeholder="本文を入力..." className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none min-h-[150px] font-medium" value={newPost.content} onChange={e => setNewPost({ ...newPost, content: e.target.value })} />
-                  <button type="submit" disabled={isBroadcasting || !newPost.area || !newPost.title} className="w-full bg-[#06C755] text-white font-black py-5 rounded-2xl shadow-xl hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 disabled:bg-slate-200">
-                    {isBroadcasting ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fab fa-line text-2xl"></i> LINE友だち全員に通知</>}
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!newPost.title || !newPost.content) return;
+
+                  const postPayload = {
+                    userId: user.id,
+                    userName: user.nickname,
+                    userAvatar: user.avatar,
+                    category: newPost.category as any,
+                    area: selectedAreas[0], // Default to primary area
+                    title: newPost.title,
+                    content: newPost.content,
+                    imageUrl: newPost.imageUrl
+                  };
+
+                  const { data, error } = await createPost(postPayload);
+
+                  if (!error && data) {
+                    const createdPost: Post = {
+                      id: data[0].id,
+                      ...postPayload,
+                      likes: 0,
+                      comments: [],
+                      createdAt: new Date().toISOString()
+                    };
+                    setPosts([createdPost, ...posts]);
+                    setIsPosting(false);
+                    setNewPost({ title: '', content: '', category: 'general', area: '', imageUrl: '' });
+                    addToast('投稿しました！', 'success');
+                    addScore(5); // 投稿ボーナス
+                  } else {
+                    addToast('投稿に失敗しました', 'error');
+                  }
+                }} className="space-y-4">
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {['general', 'event', 'safety', 'marketplace', 'notice'].map(cat => (
+                      <button
+                        type="button"
+                        key={cat}
+                        onClick={() => setNewPost({ ...newPost, category: cat })}
+                        className={`px-4 py-2 rounded-full text-xs font-black whitespace-nowrap transition-all ${newPost.category === cat ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                      >
+                        {cat === 'general' && '雑談'}
+                        {cat === 'event' && 'イベント'}
+                        {cat === 'safety' && '防犯・防災'}
+                        {cat === 'marketplace' && '譲ります'}
+                        {cat === 'notice' && 'お知らせ'}
+                      </button>
+                    ))}
+                  </div>
+                  <input type="text" placeholder="タイトル" className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none font-black text-lg" value={newPost.title} onChange={e => setNewPost({ ...newPost, title: e.target.value })} autoFocus />
+                  <textarea placeholder="内容を入力..." className="w-full px-5 py-4 bg-slate-50 rounded-2xl outline-none min-h-[120px] font-medium resize-none" value={newPost.content} onChange={e => setNewPost({ ...newPost, content: e.target.value })} />
+
+                  {/* Image URL Input (Simplified for mock) */}
+                  <div className="flex items-center gap-2 bg-slate-50 px-5 py-3 rounded-2xl">
+                    <i className="fas fa-link text-slate-400"></i>
+                    <input type="text" placeholder="画像URL (任意)" className="w-full bg-transparent outline-none text-sm font-bold text-slate-600" value={newPost.imageUrl || ''} onChange={e => setNewPost({ ...newPost, imageUrl: e.target.value })} />
+                  </div>
+
+                  <button type="submit" disabled={!newPost.title || !newPost.content} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-xl hover:bg-indigo-500 transition-all flex items-center justify-center gap-3 disabled:bg-slate-200 disabled:cursor-not-allowed">
+                    <i className="fas fa-paper-plane"></i> 投稿する
                   </button>
                 </form>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {isLoading ? (
-                  <>
-                    <PostSkeleton />
-                    <PostSkeleton />
-                    <PostSkeleton />
-                  </>
-                ) : posts.length === 0 ? (
-                  <EmptyState
-                    title="まだ投稿がありません"
-                    description="この地域の最初の投稿を作成してみましょう！"
-                  />
-                ) : (
-                  posts.map(post => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      onLike={() => handleLikePost(post.id)}
-                      currentUser={user || undefined}
-                      onAddComment={handleAddComment}
-                    />
-                  ))
-                )}
+            )}
+
+            {isPosting && user.role === 'chokai_leader' && (
+              <div className="mb-8 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <p className="text-xs font-bold text-emerald-800 mb-2">💡 町会長メニュー</p>
+                <button onClick={() => { /* Switch mode logic if needed, or just keep separate */ }} className="text-[10px] bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg">
+                  回覧板作成モードに切り替え
+                </button>
               </div>
             )}
+
+            <div className="space-y-4">
+              {isLoading ? (
+                <>
+                  <PostSkeleton />
+                  <PostSkeleton />
+                  <PostSkeleton />
+                </>
+              ) : posts.length === 0 ? (
+                <EmptyState
+                  title="まだ投稿がありません"
+                  description="この地域の最初の投稿を作成してみましょう！"
+                />
+              ) : (
+                posts.map(post => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onLike={() => handleLikePost(post.id)}
+                    currentUser={user || undefined}
+                    onAddComment={handleAddComment}
+                  />
+                ))
+              )}
+            </div>
           </div>
         );
       case 'chokai':
