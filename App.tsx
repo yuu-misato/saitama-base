@@ -206,12 +206,20 @@ const App: React.FC = () => {
       options: {
         redirectTo: window.location.origin,
         scopes: 'profile openid',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consents'
+        }
       }
     });
 
     if (error) {
       console.error('Login error:', error);
-      addToast('ログインに失敗しました: ' + error.message, 'error');
+      if (error.message.includes('Provider line could not be found')) {
+        alert('LINEログインが正しく設定されていません。\nGoogleのエンジニアとして助言します：SupabaseのAuthentication > ProvidersでLINEを有効にしてください。');
+      } else {
+        addToast('ログインに失敗しました: ' + error.message, 'error');
+      }
     }
   };
 

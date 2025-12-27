@@ -107,10 +107,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                                     <button
                                         onClick={handleFindLocation}
                                         disabled={isLocating}
-                                        className="w-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-slate-800 active:scale-95 transition-all"
+                                        className="bg-slate-900 text-white rounded-2xl flex items-center justify-center px-4 shadow-lg hover:bg-slate-800 active:scale-95 transition-all text-xs font-bold whitespace-nowrap"
                                         title="現在地から探す"
                                     >
-                                        {isLocating ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-location-arrow"></i>}
+                                        {isLocating ? <i className="fas fa-spinner fa-spin mr-2"></i> : <i className="fas fa-location-arrow mr-2"></i>}
+                                        現在地から設定
                                     </button>
                                 </div>
                             </div>
