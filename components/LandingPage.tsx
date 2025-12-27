@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SAITAMA_MUNICIPALITIES } from '../constants'; // Import areas
+import { SAITAMA_MUNICIPALITIES, MUNICIPALITY_COORDINATES } from '../constants'; // Import areas
 
 interface LandingPageProps {
     onLogin: () => void;
@@ -9,11 +9,61 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => {
     const [isRegisterOpen, setIsRegisterOpen] = useState(false);
     const [nickname, setNickname] = useState('');
-    const [selectedArea, setSelectedArea] = useState('さいたま市大宮区');
+    const [livingArea, setLivingArea] = useState('さいたま市大宮区');
+    const [interestAreas, setInterestAreas] = useState<string[]>([]);
+    const [isLocating, setIsLocating] = useState(false);
 
     const handleRegister = () => {
         if (!nickname) return;
-        onPreRegister(nickname, [selectedArea]);
+        // Combine Living Area and Interest Areas, removing duplicates
+        const allAreas = Array.from(new Set([livingArea, ...interestAreas]));
+        onPreRegister(nickname, allAreas);
+    };
+
+    const toggleInterestArea = (area: string) => {
+        if (livingArea === area) return; // Ignore if it's the living area
+        if (interestAreas.includes(area)) {
+            setInterestAreas(interestAreas.filter(a => a !== area));
+        } else {
+            setInterestAreas([...interestAreas, area]);
+        }
+    };
+
+    const handleFindLocation = () => {
+        if (!navigator.geolocation) {
+            alert('お使いのブラウザでは位置情報がサポートされていません');
+            return;
+        }
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                // Find nearest municipality
+                let nearest = '';
+                let minDistance = Infinity;
+
+                Object.entries(MUNICIPALITY_COORDINATES).forEach(([name, coords]) => {
+                    const dist = Math.sqrt(
+                        Math.pow(coords.lat - latitude, 2) +
+                        Math.pow(coords.lon - longitude, 2)
+                    );
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        nearest = name;
+                    }
+                });
+
+                if (nearest) {
+                    setLivingArea(nearest);
+                }
+                setIsLocating(false);
+            },
+            (error) => {
+                console.error(error);
+                alert('位置情報の取得に失敗しました');
+                setIsLocating(false);
+            }
+        );
     };
 
     return (
@@ -21,19 +71,75 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
             {/* Registration Modal */}
             {isRegisterOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-[2rem] w-full max-w-md max-h-[90vh] overflow-y-auto p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
                         <button
                             onClick={() => setIsRegisterOpen(false)}
-                            className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200"
+                            className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200 z-10"
                         >
                             <i className="fas fa-times"></i>
                         </button>
 
                         <h3 className="text-2xl font-black text-center mb-2">新規登録</h3>
-                        <p className="text-slate-400 text-center text-sm font-bold mb-8">プロフィールを入力してLINE連携へ進みます</p>
+                        <p className="text-slate-400 text-center text-sm font-bold mb-8">あなたにぴったりの情報をお届けします</p>
 
-                        <div className="space-y-6">
-                            <div className="space-y-2">
+                        <div className="space-y-8">
+                            {/* Living Area */}
+                            <div className="space-y-3">
+                                <label className="flex items-center gap-2 text-xs font-black text-slate-500 pl-2">
+                                    <i className="fas fa-home text-emerald-500"></i>
+                                    お住まいの地域（1つ）
+                                </label>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <select
+                                            value={livingArea}
+                                            onChange={(e) => setLivingArea(e.target.value)}
+                                            className="w-full bg-emerald-50 border border-emerald-100 px-5 py-4 rounded-2xl font-bold outline-none appearance-none focus:ring-2 focus:ring-emerald-500/20 text-emerald-800"
+                                        >
+                                            {SAITAMA_MUNICIPALITIES.map(city => (
+                                                <option key={city} value={city}>{city}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-5 top-1/2 -translate-y-1/2 text-emerald-600 pointer-events-none">
+                                            <i className="fas fa-chevron-down"></i>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleFindLocation}
+                                        disabled={isLocating}
+                                        className="w-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-lg hover:bg-slate-800 active:scale-95 transition-all"
+                                        title="現在地から探す"
+                                    >
+                                        {isLocating ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-location-arrow"></i>}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Interest Areas */}
+                            <div className="space-y-3">
+                                <label className="flex items-center gap-2 text-xs font-black text-slate-500 pl-2">
+                                    <i className="fas fa-heart text-rose-500"></i>
+                                    気になる地域（複数選択可）
+                                </label>
+                                <div className="h-40 overflow-y-auto bg-slate-50 rounded-2xl p-4 border border-slate-100 grid grid-cols-2 gap-2">
+                                    {SAITAMA_MUNICIPALITIES.filter(city => city !== livingArea).map(city => (
+                                        <button
+                                            key={city}
+                                            onClick={() => toggleInterestArea(city)}
+                                            className={`text-xs font-bold py-2 px-3 rounded-xl transition-all text-left truncate ${interestAreas.includes(city)
+                                                    ? 'bg-rose-50 text-rose-600 ring-2 ring-rose-500/20'
+                                                    : 'bg-white text-slate-500 hover:bg-slate-200'
+                                                }`}
+                                        >
+                                            {interestAreas.includes(city) && <i className="fas fa-check mr-1"></i>}
+                                            {city}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Nickname */}
+                            <div className="space-y-3">
                                 <label className="text-xs font-black text-slate-500 pl-2">ニックネーム</label>
                                 <input
                                     type="text"
@@ -44,24 +150,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-black text-slate-500 pl-2">お住まいの地域</label>
-                                <div className="relative">
-                                    <select
-                                        value={selectedArea}
-                                        onChange={(e) => setSelectedArea(e.target.value)}
-                                        className="w-full bg-slate-50 px-5 py-4 rounded-2xl font-bold outline-none appearance-none focus:ring-2 focus:ring-emerald-500/20"
-                                    >
-                                        {SAITAMA_MUNICIPALITIES.map(city => (
-                                            <option key={city} value={city}>{city}</option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                        <i className="fas fa-chevron-down"></i>
-                                    </div>
-                                </div>
-                            </div>
-
                             <button
                                 onClick={handleRegister}
                                 disabled={!nickname}
@@ -70,10 +158,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                                 <i className="fab fa-line text-2xl"></i>
                                 LINE認証して登録完了
                             </button>
-
-                            <p className="text-[10px] text-center text-slate-400 font-bold">
-                                登録ボタンを押すことで、利用規約に同意したものとみなします。
-                            </p>
                         </div>
                     </div>
                 </div>

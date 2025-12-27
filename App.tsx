@@ -7,7 +7,7 @@ import CommunityPanel from './components/CommunityPanel';
 import BusinessPanel from './components/BusinessPanel';
 import LandingPage from './components/LandingPage';
 import { Post, PostCategory, Coupon, Kairanban, VolunteerMission, User, Community } from './types';
-import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
+import { SAITAMA_MUNICIPALITIES, MUNICIPALITY_COORDINATES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
 import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons, getMissions, createMission, joinMission, addComment, toggleLike } from './services/supabaseService';
 
 import { summarizeLocalFeed } from './services/geminiService';
@@ -856,7 +856,38 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <h3 className="text-xl font-black text-slate-800">マイエリア設定 (Real-time Sync)</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-black text-slate-800">マイエリア設定 (Real-time Sync)</h3>
+              <button
+                onClick={() => {
+                  if (!navigator.geolocation) {
+                    addToast('位置情報がサポートされていません', 'error');
+                    return;
+                  }
+                  navigator.geolocation.getCurrentPosition(pos => {
+                    const { latitude, longitude } = pos.coords;
+                    let nearest = '';
+                    let minDistance = Infinity;
+                    Object.entries(MUNICIPALITY_COORDINATES).forEach(([name, coords]) => {
+                      const dist = Math.sqrt(Math.pow(coords.lat - latitude, 2) + Math.pow(coords.lon - longitude, 2));
+                      if (dist < minDistance) {
+                        minDistance = dist;
+                        nearest = name;
+                      }
+                    });
+                    if (nearest && !selectedAreas.includes(nearest)) {
+                      setSelectedAreas([...selectedAreas, nearest]);
+                      addToast(`${nearest}を追加しました`, 'success');
+                    } else if (nearest) {
+                      addToast(`${nearest}は既に追加されています`, 'info');
+                    }
+                  }, () => addToast('位置情報の取得に失敗しました', 'error'));
+                }}
+                className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-slate-700"
+              >
+                <i className="fas fa-location-arrow"></i> 現在地から追加
+              </button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {SAITAMA_MUNICIPALITIES.map(area => (
                 <button key={area} onClick={() => setSelectedAreas(selectedAreas.includes(area) ? selectedAreas.filter(a => a !== area) : [...selectedAreas, area])} className={`text-[10px] p-2 rounded-xl border font-bold transition-all ${selectedAreas.includes(area) ? 'bg-emerald-50 border-emerald-600 text-emerald-700' : 'bg-white border-slate-200 text-slate-500'}`}>{area}</button>
