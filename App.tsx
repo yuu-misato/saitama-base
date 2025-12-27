@@ -488,7 +488,8 @@ const App: React.FC = () => {
   };
 
   const handleJoinMission = async (id: string, points: number) => {
-    const { error } = await joinMission(id);
+    if (!user) return;
+    const { error } = await joinMission(id, user.id);
     if (!error) {
       setMissions(missions.map(m => m.id === id ? { ...m, currentParticipants: m.currentParticipants + 1 } : m));
       addScore(points);

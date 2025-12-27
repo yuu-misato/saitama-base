@@ -1,165 +1,181 @@
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
--- PROFILES table (Public profiles for users)
-create table public.profiles (
-  id uuid references auth.users not null primary key,
-  id uuid primary key, -- removed references auth.users for external auth prototype
-  updated_at timestamp with time zone,
-  nickname text,
+-- 1. Profiles (User Data)
+create table if not exists profiles (
+  id uuid references auth.users on delete cascade primary key,
+  nickname text not null,
   avatar_url text,
-  role text default 'resident', -- resident, business, admin, chokai_leader
+  role text default 'resident',
   level int default 1,
   score int default 0,
-  shop_name text,
-  selected_areas text[]
+  selected_areas text[] default '{}',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.profiles enable row level security;
+-- 2. Communities
+create table if not exists communities (
+  id text primary key, -- utilizing client-generated IDs for now as per app logic
+  name text not null,
+  description text,
+  owner_id uuid references profiles(id),
+  image_url text,
+  invite_code text unique,
+  is_secret boolean default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
 
--- PROTOTYPE ONLY: Allow full access to profiles
-create policy "Allow all for patterns" on public.profiles
-  for all using (true) with check (true);
+-- 3. Community Members (Many-to-Many)
+create table if not exists community_members (
+  community_id text references communities(id) on delete cascade,
+  user_id uuid references profiles(id) on delete cascade,
+  joined_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  primary key (community_id, user_id)
+);
 
--- POSTS table
-create table public.posts (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references public.profiles(id) not null,
-  category text not null,
-  area text not null,
+-- 4. Posts (Timeline)
+create table if not exists posts (
+  id text primary key, -- using text ids from client for now
+  author_id uuid references profiles(id) on delete cascade not null,
   title text not null,
   content text not null,
+  category text not null,
+  area text not null,
   image_url text,
   likes int default 0,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.posts enable row level security;
+-- Index for area search (Critical for performance)
+create index if not exists posts_area_idx on posts(area);
 
-create policy "Posts are viewable by everyone." on public.posts
-  for select using (true);
+-- 5. Post Likes (User interaction history)
+-- Google Engineer Note: Prevents double liking and race conditions
+create table if not exists post_likes (
+  post_id text references posts(id) on delete cascade,
+  user_id uuid references profiles(id) on delete cascade,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  primary key (post_id, user_id)
+);
 
-create policy "Authenticated users can create posts." on public.posts
-  for insert with check (auth.role() = 'authenticated');
-
--- COMMENTS table
-create table public.comments (
+-- 6. Comments
+create table if not exists comments (
   id uuid default uuid_generate_v4() primary key,
-  post_id uuid references public.posts(id) on delete cascade not null,
-  user_id uuid references public.profiles(id) not null,
+  post_id text references posts(id) on delete cascade not null,
+  user_id uuid references profiles(id) on delete cascade not null,
   content text not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.comments enable row level security;
-
-create policy "Comments are viewable by everyone." on public.comments
-  for select using (true);
-
-create policy "Authenticated users can create comments." on public.comments
-  for insert with check (auth.role() = 'authenticated');
-
--- KAIRANBANS table (Circulation Board)
-create table public.kairanbans (
-  id uuid default uuid_generate_v4() primary key,
+-- 7. Kairanbans (Circulars)
+create table if not exists kairanbans (
+  id text primary key,
   title text not null,
   content text not null,
   area text not null,
-  author text not null, -- Display name or reference to profile
-  points int default 0,
-  read_count int default 0,
+  author text, -- keeping as text for flexibility or link to profiles
   sent_to_line boolean default false,
+  community_id text references communities(id) on delete set null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.kairanbans enable row level security;
-
-create policy "Kairanbans are viewable by everyone." on public.kairanbans
-  for select using (true);
-
-create policy "Only specific roles can create kairanbans." on public.kairanbans
-  for insert with check (auth.role() = 'authenticated'); -- Needs finer grained control in production
-
--- COUPONS table
-create table public.coupons (
-  id uuid default uuid_generate_v4() primary key,
-  shop_name text not null,
-  title text not null,
-  required_score int default 0,
-  discount text not null,
-  image_url text,
-  area text not null,
-  is_used boolean default false,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- 8. Kairanban Reads (Read status per user)
+-- Google Engineer Note: Essential for "who read this" tracking
+create table if not exists kairanban_reads (
+  kairanban_id text references kairanbans(id) on delete cascade,
+  user_id uuid references profiles(id) on delete cascade,
+  read_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  primary key (kairanban_id, user_id)
 );
 
-alter table public.coupons enable row level security;
-
-create policy "Coupons are viewable by everyone." on public.coupons
-  for select using (true);
-
--- VOLUNTEER MISSIONS table
-create table public.volunteer_missions (
+-- 9. Volunteer Missions
+create table if not exists volunteer_missions (
   id uuid default uuid_generate_v4() primary key,
   title text not null,
   description text not null,
-  points int default 0,
+  points int default 50,
   area text not null,
-  date text not null, -- Keeping as text for flexibility based on frontend, consider timestamp
-  current_participants int default 0,
+  date text,
   max_participants int default 10,
+  current_participants int default 0,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
-alter table public.volunteer_missions enable row level security;
+-- 10. Mission Participants (Tracking who joined)
+-- Google Engineer Note: Critical for point distribution and attendance
+create table if not exists mission_participants (
+  mission_id uuid references volunteer_missions(id) on delete cascade,
+  user_id uuid references profiles(id) on delete cascade,
+  status text default 'joined', -- joined, completed, cancelled
+  joined_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  primary key (mission_id, user_id)
+);
 
-create policy "Missions are viewable by everyone." on public.volunteer_missions
-  for select using (true);
+-- 11. Coupons
+create table if not exists coupons (
+  id uuid default uuid_generate_v4() primary key,
+  shop_name text not null,
+  title text not null,
+  description text,
+  discount_rate text,
+  area text not null,
+  image_url text,
+  required_score int default 100,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
 
--- Functions to handle new user signup
-create or replace function public.handle_new_user() 
-returns trigger as $$
+-- Database Functions (RPC) for Atomic Operations
+
+-- Function to increment likes atomically
+create or replace function toggle_like(p_id text, u_id uuid)
+returns void as $$
 begin
-  insert into public.profiles (id, nickname, avatar_url, role)
-  values (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url', 'resident');
-  return new;
+  if exists (select 1 from post_likes where post_id = p_id and user_id = u_id) then
+    delete from post_likes where post_id = p_id and user_id = u_id;
+    update posts set likes = likes - 1 where id = p_id;
+  else
+    insert into post_likes (post_id, user_id) values (p_id, u_id);
+    update posts set likes = likes + 1 where id = p_id;
+  end if;
 end;
 $$ language plpgsql security definer;
 
--- Trigger for new user signup
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+-- Function to join mission atomically
+create or replace function join_mission(m_id uuid, u_id uuid)
+returns boolean as $$
+declare
+  current_count int;
+  max_count int;
+begin
+  -- Check if already joined
+  if exists (select 1 from mission_participants where mission_id = m_id and user_id = u_id) then
+    return false;
+  end if;
 
--- Storage buckets handling (optional, uncomment if needed)
--- insert into storage.buckets (id, name) values ('post-images', 'post-images');
--- create policy "Public Access" on storage.objects for select using ( bucket_id = 'post-images' );
--- COMMUNITIES table
-create table public.communities (
-  id uuid default uuid_generate_v4() primary key,
-  name text not null,
-  description text,
-  owner_id uuid references public.profiles(id) not null,
-  invite_code text unique default substr(md5(random()::text), 0, 8),
-  image_url text,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+  -- Lock row and check capacity
+  select current_participants, max_participants into current_count, max_count
+  from volunteer_missions where id = m_id for update;
 
-alter table public.communities enable row level security;
+  if current_count < max_count then
+    insert into mission_participants (mission_id, user_id) values (m_id, u_id);
+    update volunteer_missions set current_participants = current_participants + 1 where id = m_id;
+    return true;
+  else
+    return false;
+  end if;
+end;
+$$ language plpgsql security definer;
 
-create policy "Allow all communities" on public.communities
-  for all using (true) with check (true);
+-- Setup Row Level Security (RLS) - Basic Policies
+alter table profiles enable row level security;
+alter table posts enable row level security;
+alter table kairanbans enable row level security;
 
--- COMMUNITY MEMBERS table
-create table public.community_members (
-  community_id uuid references public.communities(id) on delete cascade not null,
-  user_id uuid references public.profiles(id) on delete cascade not null,
-  joined_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  primary key (community_id, user_id)
-);
+-- Allow public read for MVP (Restrict later)
+create policy "Public profiles are viewable by everyone" on profiles for select using (true);
+create policy "Users can insert their own profile" on profiles for insert with check (auth.uid() = id);
+create policy "Users can update own profile" on profiles for update using (auth.uid() = id);
 
-alter table public.community_members enable row level security;
-
-create policy "Allow all members" on public.community_members
-  for all using (true) with check (true);
+create policy "Posts are viewable by everyone" on posts for select using (true);
+create policy "Authenticated users can create posts" on posts for insert with check (auth.role() = 'authenticated');
 

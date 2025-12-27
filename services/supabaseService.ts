@@ -116,27 +116,16 @@ export const addComment = async (comment: { postId: string, userId: string, cont
 };
 
 /**
- * いいね機能（永続化）
+ * いいね機能（永続化・アトミック処理）
  */
 export const toggleLike = async (postId: string, userId: string) => {
-  // 注: 本来は likes_history テーブル等で重複排除すべきだが、
-  // 既存の posts.likes カウントアップに合わせて簡易実装する
-  const { data: post } = await supabase
-    .from('posts')
-    .select('likes')
-    .eq('id', postId)
-    .single();
+  // Google Engineer Fix: Use database function (RPC) for atomicity
+  const { error } = await supabase.rpc('toggle_like', {
+    p_id: postId,
+    u_id: userId
+  });
 
-  if (post) {
-    const newLikes = (post.likes || 0) + 1;
-    const { data, error } = await supabase
-      .from('posts')
-      .update({ likes: newLikes })
-      .eq('id', postId)
-      .select();
-    return { data, error };
-  }
-  return { data: null, error: 'Post not found' };
+  return { error };
 };
 
 /**
@@ -232,25 +221,22 @@ export const createMission = async (mission: any) => {
 };
 
 /**
- * ミッションに参加（カウントアップのみの簡易実装）
+ * ミッションに参加（トランザクション処理）
  */
-export const joinMission = async (missionId: string) => {
-  // Note: 本来的には transaction または rpc を使うべき
-  const { data: current } = await supabase
-    .from('volunteer_missions')
-    .select('current_participants')
-    .eq('id', missionId)
-    .single();
+export const joinMission = async (missionId: string, userId: string) => {
+  // Google Engineer Fix: Use RPC to prevent race conditions (overbooking)
+  const { data, error } = await supabase.rpc('join_mission', {
+    m_id: missionId,
+    u_id: userId
+  });
 
-  if (current) {
-    const { data, error } = await supabase
-      .from('volunteer_missions')
-      .update({ current_participants: (current.current_participants || 0) + 1 })
-      .eq('id', missionId)
-      .select();
-    return { data, error };
+  if (data === true) {
+    return { data, error: null };
+  } else if (data === false) {
+    return { data: null, error: 'Already joined or full' };
   }
-  return { data: null, error: 'Mission not found' };
+
+  return { data, error };
 };
 // ... (existing code)
 
