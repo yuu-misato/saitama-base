@@ -826,6 +826,7 @@ const App: React.FC = () => {
               selectedAreas={selectedAreas}
               userRole={user?.role}
               onOpenCreateMission={() => setIsCreatingMission(true)}
+              myCommunities={myCommunities}
             />
           </>
         );

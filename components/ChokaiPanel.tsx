@@ -1,5 +1,4 @@
-
-import { Kairanban, VolunteerMission, User } from '../types';
+import { Kairanban, VolunteerMission, Community } from '../types';
 
 interface ChokaiPanelProps {
   kairanbans: Kairanban[];
@@ -9,11 +8,44 @@ interface ChokaiPanelProps {
   selectedAreas: string[];
   userRole?: 'resident' | 'business' | 'admin' | 'chokai_leader';
   onOpenCreateMission?: () => void;
+  myCommunities: Community[];
 }
 
-const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadKairanban, onJoinMission, selectedAreas, userRole, onOpenCreateMission }) => {
-  const filteredKairanbans = kairanbans.filter(k => selectedAreas.includes(k.area));
+const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadKairanban, onJoinMission, selectedAreas, userRole, onOpenCreateMission, myCommunities }) => {
+  // Area filter OR Community ID match
+  const filteredKairanbans = kairanbans.filter(k =>
+    selectedAreas.includes(k.area) ||
+    (k.communityId && myCommunities.some(c => c.id === k.communityId))
+  );
+
   const filteredMissions = missions.filter(m => selectedAreas.includes(m.area));
+
+  const createCalendarUrl = (title: string, description: string, dateStr: string) => {
+    // Simple parsing for "MM/DD HH:mm" or "YYYY-MM-DD"
+    // This is a basic implementation. For production, use a library like date-fns.
+    let startDate = new Date();
+    try {
+      const currentYear = new Date().getFullYear();
+      // Check if dateStr contains year
+      if (dateStr.includes('/')) {
+        const parts = dateStr.split(' ');
+        const dateParts = parts[0].split('/');
+        const timeParts = parts[1] ? parts[1].split(':') : ['00', '00'];
+        startDate.setFullYear(currentYear, parseInt(dateParts[0]) - 1, parseInt(dateParts[1]));
+        startDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]));
+      } else {
+        startDate = new Date(dateStr);
+      }
+    } catch (e) {
+      console.error("Date parse error", e);
+    }
+
+    const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour duration by default
+
+    const format = (d: Date) => d.toISOString().replace(/-|:|\.\d\d\d/g, "");
+
+    return `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&details=${encodeURIComponent(description)}&dates=${format(startDate)}/${format(endDate)}`;
+  };
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
@@ -37,6 +69,12 @@ const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadK
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg">{k.author}</span>
                     <span className="text-[10px] text-slate-400 font-bold">{new Date(k.createdAt).toLocaleDateString()}</span>
+                    {k.communityId && myCommunities.find(c => c.id === k.communityId) && (
+                      <span className="text-[9px] font-black text-white bg-indigo-500 px-2 py-0.5 rounded-lg">
+                        <i className="fas fa-users mr-1"></i>
+                        {myCommunities.find(c => c.id === k.communityId)?.name}
+                      </span>
+                    )}
                     {k.sentToLine && (
                       <span className="text-[9px] font-black text-[#06C755] bg-[#06C755]/10 px-2 py-0.5 rounded-lg flex items-center gap-1">
                         <i className="fab fa-line"></i> LINE通知済み
@@ -52,6 +90,20 @@ const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadK
                 )}
               </div>
               <p className="text-sm text-slate-600 leading-relaxed mb-6 font-medium whitespace-pre-wrap">{k.content}</p>
+
+              {k.date && (
+                <div className="mb-4">
+                  <a
+                    href={createCalendarUrl(k.title, k.content, k.date)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 bg-slate-100 px-3 py-2 rounded-xl hover:bg-slate-200 transition-colors"
+                  >
+                    <i className="fab fa-google"></i> Googleカレンダーに追加
+                  </a>
+                </div>
+              )}
+
               <div className="flex items-center justify-between border-t border-slate-50 pt-4">
                 <div className="text-[10px] text-slate-400 font-bold">
                   <i className="fas fa-eye mr-1"></i> {k.readCount}人が確認済み
@@ -110,6 +162,20 @@ const ChokaiPanel: React.FC<ChokaiPanelProps> = ({ kairanbans, missions, onReadK
                 </div>
               </div>
               <p className="text-sm text-slate-500 mb-6 font-medium line-clamp-3">{m.description}</p>
+
+              {/* Date & Calendar */}
+              <div className="mb-6 flex items-center justify-between bg-slate-50 p-3 rounded-xl">
+                <span className="text-xs font-bold text-slate-700"><i className="far fa-clock mr-1"></i> {m.date}</span>
+                <a
+                  href={createCalendarUrl(m.title, m.description, m.date)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[10px] font-black text-slate-400 hover:text-[#4285F4] transition-colors flex items-center gap-1"
+                >
+                  <i className="fab fa-google"></i> Calendar
+                </a>
+              </div>
+
               <div className="space-y-4 mb-6">
                 <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
                   <span>参加状況</span>
