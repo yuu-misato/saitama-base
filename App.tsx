@@ -287,11 +287,15 @@ const App: React.FC = () => {
 
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     // 1. Redirect URIの動的生成
-    // 注意: LINE Developers Consoleに登録したCallback URLと"完全一致"する必要があります。
-    // スラッシュの有無も区別されるため、ブラウザの挙動に合わせてスラッシュを残します。
-    const redirectUri = window.location.origin + window.location.pathname;
+    // 【Google Engineer Fix】
+    // 以前の `origin + pathname` では、ルートパスの場合に末尾スラッシュが付与され、
+    // LINE Developers Consoleの設定（末尾スラッシュなし）と不一致を起こしていました。
+    // また、サブディレクトリ（/feedなど）からのログインでもConsoleへの追加登録が必要になる脆弱性がありました。
+    // `window.location.origin` のみを使用することで、常に "https://domain.com" の形式（末尾スラッシュなし）を保証し、
+    // どのページからでも単一のCallback URLで安全に認証を行えるようにします。
+    const redirectUri = window.location.origin;
 
-    console.log('🔗 LINE Login Redirect URI:', redirectUri);
+    console.log('🔗 LINE Login Redirect URI (Strict):', redirectUri);
 
     // LINE OAuth 2.1 Authorize URLの構築
     const state = Math.random().toString(36).substring(7);
