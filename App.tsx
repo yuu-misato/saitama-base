@@ -13,6 +13,7 @@ import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, IN
 import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons, getMissions, createMission, joinMission } from './services/supabaseService';
 import { summarizeLocalFeed } from './services/geminiService';
 
+import AdminDashboard from './components/AdminDashboard';
 import { PostSkeleton } from './components/Skeleton';
 import EmptyState from './components/EmptyState';
 import Toast, { ToastMessage } from './components/Toast';
@@ -734,6 +735,8 @@ const App: React.FC = () => {
         return <CouponList coupons={coupons} currentScore={score} selectedAreas={selectedAreas} />;
       case 'business':
         return <BusinessPanel user={user} onRegisterCoupon={handleRegisterCoupon} myCoupons={coupons.filter(c => c.shopName === user.shopName)} />;
+      case 'admin':
+        return user.role === 'admin' ? <AdminDashboard currentUser={user} onAddToast={addToast} /> : null;
       case 'ai': return <AIChat />;
       case 'profile':
         // ... (keep profile logic)

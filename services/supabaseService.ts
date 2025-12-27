@@ -203,3 +203,70 @@ export const joinMission = async (missionId: string) => {
   }
   return { data: null, error: 'Mission not found' };
 };
+// ... (existing code)
+
+/**
+ * 管理者機能：全ユーザー取得
+ */
+export const getAllUsers = async () => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: false });
+  return { data, error };
+};
+
+/**
+ * 管理者機能：ユーザー権限更新
+ */
+export const updateUserRole = async (userId: string, role: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ role })
+    .eq('id', userId)
+    .select();
+  return { data, error };
+};
+
+/**
+ * 管理者機能：ポイント付与
+ */
+export const giveUserPoints = async (userId: string, points: number) => {
+  const { data: current } = await supabase
+    .from('profiles')
+    .select('score')
+    .eq('id', userId)
+    .single();
+
+  if (current) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ score: (current.score || 0) + points })
+      .eq('id', userId)
+      .select();
+    return { data, error };
+  }
+  return { data: null, error: 'User not found' };
+};
+
+/**
+ * 管理者機能：全コミュニティ取得
+ */
+export const getAllCommunities = async () => {
+  const { data, error } = await supabase
+    .from('communities')
+    .select('*')
+    .order('created_at', { ascending: false });
+  return { data, error };
+};
+
+/**
+ * 管理者機能：コミュニティ削除
+ */
+export const deleteCommunity = async (communityId: string) => {
+  const { error } = await supabase
+    .from('communities')
+    .delete()
+    .eq('id', communityId);
+  return { error };
+};

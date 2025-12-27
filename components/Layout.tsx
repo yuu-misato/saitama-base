@@ -20,6 +20,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
     { id: 'chokai', icon: 'fas fa-clipboard-list', label: '回覧板・活動' },
     { id: 'coupons', icon: 'fas fa-ticket-alt', label: '地域クーポン' },
     ...(userRole === 'business' ? [{ id: 'business', icon: 'fas fa-store', label: '事業者管理' }] : []),
+    ...(userRole === 'admin' ? [{ id: 'admin', icon: 'fas fa-shield-alt', label: '管理コンソール' }] : []),
     { id: 'ai', icon: 'fas fa-robot', label: 'AIコンシェルジュ' },
     { id: 'profile', icon: 'fas fa-cog', label: '設定' },
   ];
