@@ -327,10 +327,11 @@ const App: React.FC = () => {
     }
 
     // URL構築
+    console.log('Using Redirect URI for params:', redirectUri); // DEBUG
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: LINE_CLIENT_ID,
-      redirect_uri: redirectUri, // エンコードはURLSearchParamsが自動で行うが、念のため確認
+      redirect_uri: redirectUri, // エンコードはURLSearchParamsが自動で行う
       state: state,
       scope: 'profile openid',
       bot_prompt: 'aggressive', // 友だち追加を促す
