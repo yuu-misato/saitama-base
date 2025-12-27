@@ -36,7 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
             <div className="w-10 h-10 bg-gradient-to-tr from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-200">
               <span className="italic">S</span>
             </div>
-            Saitama BASE
+            回覧板BASE
           </div>
         </div>
 
