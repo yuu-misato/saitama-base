@@ -91,6 +91,55 @@ export const createPost = async (post: any) => {
 };
 
 /**
+ * コメント機能（SNS強化）
+ */
+export const getComments = async (postId: string) => {
+  const { data, error } = await supabase
+    .from('comments')
+    .select('*, author:profiles(nickname, avatar_url)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true });
+  return { data, error };
+};
+
+export const addComment = async (comment: { postId: string, userId: string, content: string }) => {
+  const { data, error } = await supabase
+    .from('comments')
+    .insert({
+      post_id: comment.postId,
+      user_id: comment.userId,
+      content: comment.content
+    })
+    .select('*, author:profiles(nickname, avatar_url)')
+    .single();
+  return { data, error };
+};
+
+/**
+ * いいね機能（永続化）
+ */
+export const toggleLike = async (postId: string, userId: string) => {
+  // 注: 本来は likes_history テーブル等で重複排除すべきだが、
+  // 既存の posts.likes カウントアップに合わせて簡易実装する
+  const { data: post } = await supabase
+    .from('posts')
+    .select('likes')
+    .eq('id', postId)
+    .single();
+
+  if (post) {
+    const newLikes = (post.likes || 0) + 1;
+    const { data, error } = await supabase
+      .from('posts')
+      .update({ likes: newLikes })
+      .eq('id', postId)
+      .select();
+    return { data, error };
+  }
+  return { data: null, error: 'Post not found' };
+};
+
+/**
  * 回覧板の取得
  */
 export const getKairanbans = async () => {

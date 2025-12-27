@@ -10,7 +10,39 @@ import BusinessPanel from './components/BusinessPanel';
 import LandingPage from './components/LandingPage';
 import { Post, PostCategory, Coupon, Kairanban, VolunteerMission, User, Community } from './types';
 import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
-import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons, getMissions, createMission, joinMission } from './services/supabaseService';
+import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons, getMissions, createMission, joinMission, addComment, toggleLike } from './services/supabaseService';
+
+// ... (in App component)
+
+const handleAddComment = async (postId: string, content: string) => {
+  if (!user) return;
+  try {
+    await addComment({ postId, userId: user.id, content });
+    addToast('コメントを送信しました', 'success');
+    // Note: Real-time update logic would go here, 
+    // currently handled optimistically in PostCard
+  } catch (e) {
+    console.error(e);
+    addToast('送信に失敗しました', 'error');
+  }
+};
+
+const handleLikePost = async (postId: string) => {
+  if (!user) return;
+  addScore(2); // Existing gamification
+  toggleLike(postId, user.id); // New persistence
+};
+
+// ... (inside renderContent 'feed' case)
+posts.map(post => (
+  <PostCard
+    key={post.id}
+    post={post}
+    onLike={() => handleLikePost(post.id)}
+    currentUser={user || undefined}
+    onAddComment={handleAddComment}
+  />
+))
 import { summarizeLocalFeed } from './services/geminiService';
 
 import AdminDashboard from './components/AdminDashboard';
@@ -713,7 +745,15 @@ const App: React.FC = () => {
                     description="この地域の最初の投稿を作成してみましょう！"
                   />
                 ) : (
-                  posts.map(post => <PostCard key={post.id} post={post} onLike={() => addScore(2)} />)
+                  posts.map(post => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onLike={() => handleLikePost(post.id)}
+                      currentUser={user || undefined}
+                      onAddComment={handleAddComment}
+                    />
+                  ))
                 )}
               </div>
             )}
