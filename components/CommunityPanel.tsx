@@ -15,6 +15,8 @@ const CommunityPanel: React.FC<CommunityPanelProps> = ({ user, myCommunities, on
     const [newDesc, setNewDesc] = useState('');
     const [isSecret, setIsSecret] = useState(false);
     const [inviteInput, setInviteInput] = useState('');
+    const [isJoining, setIsJoining] = useState(false);
+
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -44,10 +46,7 @@ const CommunityPanel: React.FC<CommunityPanelProps> = ({ user, myCommunities, on
                     <span className="font-black text-slate-700">新しく作る</span>
                 </button>
                 <button
-                    onClick={() => {
-                        const code = prompt("招待コードを入力してください");
-                        if (code) onJoinCommunity(code);
-                    }}
+                    onClick={() => setIsJoining(true)}
                     className="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col items-center gap-3 hover:bg-slate-50 transition-all group"
                 >
                     <div className="w-14 h-14 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
@@ -56,6 +55,37 @@ const CommunityPanel: React.FC<CommunityPanelProps> = ({ user, myCommunities, on
                     <span className="font-black text-slate-700">参加する</span>
                 </button>
             </div>
+
+            {/* 参加フォーム Modal */}
+            {isJoining && (
+                <div className="bg-white border-2 border-indigo-100 rounded-[2rem] p-6 shadow-xl animate-in zoom-in-95">
+                    <h3 className="font-black text-lg mb-4 text-slate-800">招待コードで参加</h3>
+                    <div className="space-y-4">
+                        <input
+                            type="text"
+                            placeholder="招待コードを入力"
+                            className="w-full px-5 py-4 bg-slate-50 rounded-2xl font-bold outline-none border border-slate-200 focus:border-indigo-500 transition-colors text-center text-xl tracking-widest uppercase"
+                            value={inviteInput}
+                            onChange={e => setInviteInput(e.target.value)}
+                        />
+                        <div className="flex gap-3">
+                            <button onClick={() => { setIsJoining(false); setInviteInput(''); }} className="flex-1 py-4 font-bold text-slate-400 bg-slate-50 rounded-2xl">キャンセル</button>
+                            <button
+                                onClick={() => {
+                                    if (inviteInput) {
+                                        onJoinCommunity(inviteInput);
+                                        setIsJoining(false);
+                                        setInviteInput('');
+                                    }
+                                }}
+                                className="flex-1 py-4 font-black text-white bg-purple-600 rounded-2xl shadow-lg shadow-purple-200 hover:bg-purple-700 transition-colors"
+                            >
+                                参加する
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* 作成フォーム - Modal風 */}
             {isCreating && (
