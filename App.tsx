@@ -220,27 +220,33 @@ const App: React.FC = () => {
 
     // 事前登録フローの場合はpendingRegistrationが既にセットされている前提
 
-    // Force usage of generic OIDC which is more reliable when "LINE" provider is missing in Supabase UI
+    // 1. Try native LINE provider (Standard)
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'oidc',
+      provider: 'line',
       options: {
         redirectTo: window.location.origin,
-        scopes: 'openid profile',
+        scopes: 'profile openid',
         queryParams: {
-          prompt: 'consents',
+          access_type: 'offline',
+          prompt: 'consents'
         }
       }
     });
 
     if (error) {
       console.error('Login error:', error);
-      alert(
-        'ログイン設定エラーが発生しました。\n\n' +
-        'Supabaseの Authentication > Providers にて「OpenID Connect」が有効になっているか確認してください。\n' +
-        '・Issuer URL: https://access.line.me\n' +
-        '・Client ID: (LINE DevelopersのChannel ID)\n' +
-        '・Client Secret: (LINE DevelopersのChannel Secret)'
-      );
+      if (error.message.includes('Provider line could not be found')) {
+        alert(
+          '【Supabase設定エラー】\n' +
+          '「LINE」プロバイダーが見つかりません。\n\n' +
+          'Googleのエンジニアとして助言します。以下の手順で設定を有効化してください：\n\n' +
+          '1. Supabaseの Authentication > Providers 画面を開く\n' +
+          '2. 一覧に「LINE」がない場合は、画面内の「Add Provider」ボタンを探す、または検索バーで「LINE」を検索する\n' +
+          '3. LINEプロバイダーを有効化し、IDとSecretを入力して保存する'
+        );
+      } else {
+        addToast('ログインエラー: ' + error.message, 'error');
+      }
     }
   };
 
