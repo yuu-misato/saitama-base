@@ -286,8 +286,17 @@ const App: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
+    // 1. Redirect URIの動的生成（クエリパラメータを除去）
+    const baseUrl = window.location.origin + window.location.pathname;
+    // 末尾のスラッシュを除去（LINEの設定と一致させるため）
+    const redirectUri = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+
+    console.log('🔗 LINE Login Redirect URI:', redirectUri);
+
     // LINE OAuth 2.1 Authorize URLの構築
     const state = Math.random().toString(36).substring(7);
+    const nonce = Math.random().toString(36).substring(7); // OpenID Connect用
+
     sessionStorage.setItem('lineLoginState', state);
     sessionStorage.setItem('loginRole', role);
 
@@ -296,8 +305,20 @@ const App: React.FC = () => {
       sessionStorage.setItem('pendingInvite', publicCommunity.inviteCode);
     }
 
-    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${LINE_CLIENT_ID}&redirect_uri=${encodeURIComponent(LINE_REDIRECT_URI)}&state=${state}&scope=profile%20openid&bot_prompt=aggressive`;
+    // URL構築
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: LINE_CLIENT_ID,
+      redirect_uri: redirectUri, // エンコードはURLSearchParamsが自動で行うが、念のため確認
+      state: state,
+      scope: 'profile openid',
+      bot_prompt: 'aggressive', // 友だち追加を促す
+      nonce: nonce
+    });
 
+    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?${params.toString()}`;
+
+    console.log('🚀 Redirecting to LINE Auth:', lineAuthUrl);
     window.location.href = lineAuthUrl;
   };
 
