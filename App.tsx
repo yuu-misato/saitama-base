@@ -218,9 +218,7 @@ const App: React.FC = () => {
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     localStorage.setItem('loginRole', role);
 
-    // 事前登録フローの場合はpendingRegistrationが既にセットされている前提
-
-    // 1. Try native LINE provider (Standard)
+    // 1. まず標準のLINEプロバイダーを試行
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'line',
       options: {
@@ -234,16 +232,37 @@ const App: React.FC = () => {
     });
 
     if (error) {
-      console.error('Login error:', error);
+      console.warn('Native LINE login failed:', error);
+
+      // LINEプロバイダーが見つからない場合、自動的にOIDC接続を試みる（フォールバック）
+      // ユーザーが「LINEが一覧にないからOpenID Connectで設定した」ケースに対応
       if (error.message.includes('Provider line could not be found')) {
-        alert(
-          '【Supabase設定エラー】\n' +
-          '「LINE」プロバイダーが見つかりません。\n\n' +
-          'Googleのエンジニアとして助言します。以下の手順で設定を有効化してください：\n\n' +
-          '1. Supabaseの Authentication > Providers 画面を開く\n' +
-          '2. 一覧に「LINE」がない場合は、画面内の「Add Provider」ボタンを探す、または検索バーで「LINE」を検索する\n' +
-          '3. LINEプロバイダーを有効化し、IDとSecretを入力して保存する'
-        );
+        console.log('Falling back to OIDC provider for LINE...');
+        const { error: oidcError } = await supabase.auth.signInWithOAuth({
+          provider: 'oidc',
+          options: {
+            redirectTo: window.location.origin,
+            scopes: 'openid profile',
+            queryParams: {
+              prompt: 'consents',
+              // issuer などのパラメータはSupabase側で固定設定されている前提
+            }
+          }
+        });
+
+        if (oidcError) {
+          console.error('OIDC Fallback failed:', oidcError);
+          // 両方ダメだった場合
+          alert(
+            '【重要：ログイン設定が必要です】\n\n' +
+            'Supabase側でLINEログインが有効になっていません。\n' +
+            '前回ログインできた設定に戻すには、以下のいずれかを行ってください：\n\n' +
+            'A. Supabase > Auth > Providers で「LINE」を追加して有効化する。\n' +
+            '   ※一覧にない場合は「Add Provider」メニューから探してください。\n\n' +
+            'B. または「OpenID Connect」を有効化し、Issuerに「https://access.line.me」を設定する。\n\n' +
+            'この設定を行わないとログインできません。'
+          );
+        }
       } else {
         addToast('ログインエラー: ' + error.message, 'error');
       }
