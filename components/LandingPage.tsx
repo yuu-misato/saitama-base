@@ -358,9 +358,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
             {/* Footer */}
             <footer className="bg-white border-t border-slate-100 py-12 px-6">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-2 font-black text-xl text-slate-900">
-                        <span className="w-6 h-6 bg-slate-900 rounded flex items-center justify-center text-white text-xs">S</span>
-                        回覧板BASE
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 font-black text-xl text-slate-900">
+                            <span className="w-6 h-6 bg-slate-900 rounded flex items-center justify-center text-white text-xs">S</span>
+                            回覧板BASE
+                        </div>
+                        <a href="http://tria-go.com/" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-slate-400 hover:text-emerald-600 transition-colors">
+                            運営会社：一般社団法人TRiA GO
+                        </a>
                     </div>
                     <p className="text-slate-400 text-sm font-bold">
                         &copy; 2025 回覧板BASE All rights reserved.
