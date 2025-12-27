@@ -166,6 +166,10 @@ const App: React.FC = () => {
       }
 
       setIsLoading(false);
+    }).catch(err => {
+      console.error(err);
+      addToast('データの読み込みに失敗しました。再読み込みしてください。', 'error');
+      setIsLoading(false);
     });
 
   }, [selectedAreas, user]);
