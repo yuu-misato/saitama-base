@@ -13,6 +13,7 @@ import { SAITAMA_MUNICIPALITIES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, IN
 import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons, getMissions, createMission, joinMission } from './services/supabaseService';
 import { summarizeLocalFeed } from './services/geminiService';
 
+import Toast, { ToastMessage } from './components/Toast';
 import RegistrationModal from './components/RegistrationModal';
 
 const App: React.FC = () => {
@@ -33,6 +34,12 @@ const App: React.FC = () => {
   const [newMission, setNewMission] = useState({ title: '', description: '', points: 50, area: '', date: '', maxParticipants: 5 }); // New state
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [showScorePopup, setShowScorePopup] = useState<{ show: boolean, amount: number }>({ show: false, amount: 0 });
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const id = Math.random().toString(36).substring(7);
+    setToasts(prev => [...prev, { id, type, message }]);
+  };
 
   // 永続化ログイン & Supabase Auth 状態監視
   useEffect(() => {
@@ -803,6 +810,8 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+      <Toast toasts={toasts} onRemove={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
+
       {renderContent()}
     </Layout>
   );
