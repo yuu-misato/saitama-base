@@ -220,6 +220,7 @@ const App: React.FC = () => {
 
     // 事前登録フローの場合はpendingRegistrationが既にセットされている前提
 
+    // 1. Try native LINE provider
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'line',
       options: {
@@ -233,9 +234,33 @@ const App: React.FC = () => {
     });
 
     if (error) {
-      console.error('Login error:', error);
+      console.warn('Native LINE login failed, trying fallback to OIDC...', error);
+
+      // 2. Fallback: Try generic OpenID Connect (if user configured it as "OpenID Connect" because "LINE" was missing)
       if (error.message.includes('Provider line could not be found')) {
-        alert('LINEログインが正しく設定されていません。\nGoogleのエンジニアとして助言します：SupabaseのAuthentication > ProvidersでLINEを有効にしてください。');
+        const { error: oidcError } = await supabase.auth.signInWithOAuth({
+          provider: 'oidc',
+          options: {
+            redirectTo: window.location.origin,
+            scopes: 'openid profile',
+            queryParams: {
+              prompt: 'consents'
+            }
+          }
+        });
+
+        if (oidcError) {
+          // Both failed
+          alert(
+            '申し訳ありません。LINEプロバイダーが見つからないようです。\n\n' +
+            'Googleのエンジニアとして代替案を提示します：\n' +
+            'Supabaseの Authentication > Providers にて「OpenID Connect」を選択し、以下を設定してください。\n' +
+            '・Issuer URL: https://access.line.me\n' +
+            '・Client ID: (LINE DevelopersのChannel ID)\n' +
+            '・Client Secret: (LINE DevelopersのChannel Secret)\n\n' +
+            '設定後、再度このボタンを押すと自動的にOIDC経由で接続します。'
+          );
+        }
       } else {
         addToast('ログインに失敗しました: ' + error.message, 'error');
       }
