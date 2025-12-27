@@ -288,13 +288,27 @@ const App: React.FC = () => {
 
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     // 1. Redirect URIの動的生成
-    // 【Final Hard-fix】
-    // ローカル環境(localhost)の場合はoriginを使い、本番環境では登録済みのURLを強制的に使用する。
-    // これにより、プレビュー環境や予期せぬドメインからのアクセスでの不一致を防ぎます。
+    // 【Final Robust Fix】
+    // ローカル環境: ポート番号が可変(5173, 5174...)なため、window.location.origin を使用
+    // 本番環境: 登録済みURLと完全一致させるため、ハードコード
     const isLocal = window.location.hostname === 'localhost';
     const redirectUri = isLocal
-      ? 'http://localhost:5173'
+      ? window.location.origin
       : 'https://main.d27038hwihhfay.amplifyapp.com';
+
+    // ユーザー協力用デバッグログ
+    console.log(`
+    ============= LINE LOGIN DEBUG =============
+    Current Env: ${isLocal ? 'Localhost' : 'Production'}
+    Sent Redirect URI: ${redirectUri}
+    Current Browser URL: ${window.location.href}
+    ============================================
+    `);
+
+    // 画面下部にデバッグ表示（開発者だけでなくユーザーも確認できるように）
+    if (isLocal) {
+      addToast(`Debug: Redirect URI is ${redirectUri}`, 'info');
+    }
 
     // デバッグ用: ユーザーに現在のURIを確認してもらう（本番で問題が解決したら削除）
     // alert(`LINE Login Debug:\nRedirect URI: ${redirectUri}`);
