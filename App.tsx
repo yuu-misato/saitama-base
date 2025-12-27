@@ -220,50 +220,27 @@ const App: React.FC = () => {
 
     // 事前登録フローの場合はpendingRegistrationが既にセットされている前提
 
-    // 1. Try native LINE provider
+    // Force usage of generic OIDC which is more reliable when "LINE" provider is missing in Supabase UI
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'line',
+      provider: 'oidc',
       options: {
         redirectTo: window.location.origin,
-        scopes: 'profile openid',
+        scopes: 'openid profile',
         queryParams: {
-          access_type: 'offline',
-          prompt: 'consents'
+          prompt: 'consents',
         }
       }
     });
 
     if (error) {
-      console.warn('Native LINE login failed, trying fallback to OIDC...', error);
-
-      // 2. Fallback: Try generic OpenID Connect (if user configured it as "OpenID Connect" because "LINE" was missing)
-      if (error.message.includes('Provider line could not be found')) {
-        const { error: oidcError } = await supabase.auth.signInWithOAuth({
-          provider: 'oidc',
-          options: {
-            redirectTo: window.location.origin,
-            scopes: 'openid profile',
-            queryParams: {
-              prompt: 'consents'
-            }
-          }
-        });
-
-        if (oidcError) {
-          // Both failed
-          alert(
-            '申し訳ありません。LINEプロバイダーが見つからないようです。\n\n' +
-            'Googleのエンジニアとして代替案を提示します：\n' +
-            'Supabaseの Authentication > Providers にて「OpenID Connect」を選択し、以下を設定してください。\n' +
-            '・Issuer URL: https://access.line.me\n' +
-            '・Client ID: (LINE DevelopersのChannel ID)\n' +
-            '・Client Secret: (LINE DevelopersのChannel Secret)\n\n' +
-            '設定後、再度このボタンを押すと自動的にOIDC経由で接続します。'
-          );
-        }
-      } else {
-        addToast('ログインに失敗しました: ' + error.message, 'error');
-      }
+      console.error('Login error:', error);
+      alert(
+        'ログイン設定エラーが発生しました。\n\n' +
+        'Supabaseの Authentication > Providers にて「OpenID Connect」が有効になっているか確認してください。\n' +
+        '・Issuer URL: https://access.line.me\n' +
+        '・Client ID: (LINE DevelopersのChannel ID)\n' +
+        '・Client Secret: (LINE DevelopersのChannel Secret)'
+      );
     }
   };
 
