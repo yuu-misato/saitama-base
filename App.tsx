@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import PostCard from './components/PostCard';
-import AIChat from './components/AIChat';
 import CouponList from './components/CouponList';
 import ChokaiPanel from './components/ChokaiPanel';
 import CommunityPanel from './components/CommunityPanel';
