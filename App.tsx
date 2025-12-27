@@ -250,7 +250,7 @@ const App: React.FC = () => {
       });
       setUser(updatedUser);
       setIsEditingProfile(false);
-      alert('プロフィールを更新しました');
+      addToast('プロフィールを更新しました', 'success');
       return;
     }
 
@@ -278,7 +278,7 @@ const App: React.FC = () => {
     // コミュニティ招待の処理
     const pendingInvite = sessionStorage.getItem('pendingInvite');
     if (pendingInvite) {
-      alert('登録完了！コミュニティに参加しました。');
+      addToast('登録完了！コミュニティに参加しました。', 'success');
       sessionStorage.removeItem('pendingInvite');
     }
   };
@@ -461,7 +461,7 @@ const App: React.FC = () => {
       setMissions([created, ...missions]);
       setIsCreatingMission(false);
       setNewMission({ title: '', description: '', points: 50, area: '', date: '', maxParticipants: 5 });
-      alert('ミッションを作成しました');
+      addToast('ミッションを作成しました', 'success');
     }
   };
 
@@ -470,7 +470,7 @@ const App: React.FC = () => {
     if (!error) {
       setMissions(missions.map(m => m.id === id ? { ...m, currentParticipants: m.currentParticipants + 1 } : m));
       addScore(points);
-      alert('ミッションに参加しました！');
+      addToast('ミッションに参加しました！', 'success');
     }
   };
 
@@ -503,7 +503,7 @@ const App: React.FC = () => {
                       onClick={() => {
                         const url = `${window.location.origin}?invite=${selectedCommunity.inviteCode}`;
                         navigator.clipboard.writeText(url);
-                        alert(`招待リンクをコピーしました！\n${url}`);
+                        addToast(`招待リンクをコピーしました！`, 'success');
                       }}
                       className="flex-1 py-3 bg-white text-indigo-600 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
                     >
@@ -551,7 +551,7 @@ const App: React.FC = () => {
                     setKairanbans([kairan as any, ...kairanbans]);
                     setIsPosting(false);
                     setNewPost({ title: '', content: '', category: 'notice', area: '' });
-                    alert(`${selectedCommunity.membersCount}人のLINEに配信しました！`);
+                    addToast(`${selectedCommunity.membersCount}人のLINEに配信しました！`, 'success');
                   }} className="space-y-4">
                     {/* ... form content ... */}
                     <p className="text-sm font-bold text-slate-500 bg-slate-50 p-4 rounded-xl">
@@ -623,7 +623,7 @@ const App: React.FC = () => {
                 isSecret: false
               };
               setMyCommunities([...myCommunities, newComm]);
-              alert('コミュニティに参加しました！');
+              addToast('コミュニティに参加しました！', 'success');
             }}
             onSelectCommunity={setSelectedCommunity}
           />
