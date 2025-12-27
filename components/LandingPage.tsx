@@ -36,13 +36,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     </div>
 
                     <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-8 leading-[1.1] animate-in slide-in-from-bottom fade-in duration-700 delay-100">
-                        地域の回覧板を、<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">圧倒的に楽に。</span>
+                        <span className="inline-block">地域の回覧板を、</span>
+                        <span className="inline-block text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-500">圧倒的に楽に。</span>
                     </h1>
 
                     <p className="text-xl text-slate-500 font-medium mb-10 max-w-2xl mx-auto leading-relaxed animate-in slide-in-from-bottom fade-in duration-700 delay-200">
-                        面倒なハンコのリレーも、雨の日の配達も必要ありません。<br className="hidden md:block" />
-                        スマホひとつで、地域のお知らせはもっと自由に、もっと楽しく。
+                        <span className="inline-block">面倒なハンコのリレーも、</span><span className="inline-block">雨の日の配達も必要ありません。</span>
+                        <span className="inline-block">スマホひとつで、地域のお知らせは</span><span className="inline-block">もっと自由に、もっと楽しく。</span>
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in slide-in-from-bottom fade-in duration-700 delay-300">
@@ -91,8 +91,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                             <i className="fas fa-magic"></i>
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black mb-6">
-                            回覧板は、<br />
-                            "待つ"ものから"届く"ものへ。
+                            <span className="inline-block">回覧板は、</span>
+                            <span className="inline-block">"待つ"ものから"届く"ものへ。</span>
                         </h2>
                         <p className="text-slate-500 text-lg leading-relaxed mb-8">
                             Saitama BASEなら、地域のお知らせがLINEやアプリに直接届きます。
@@ -125,8 +125,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                             <i className="fas fa-coins"></i>
                         </div>
                         <h2 className="text-3xl md:text-4xl font-black mb-6">
-                            地域活動に参加して、<br />
-                            街をもっと好きになる。
+                            <span className="inline-block">地域活動に参加して、</span>
+                            <span className="inline-block">街をもっと好きになる。</span>
                         </h2>
                         <p className="text-slate-500 text-lg leading-relaxed mb-8">
                             回覧板を見る、ゴミ拾いに参加する、イベントを手伝う。
@@ -136,11 +136,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                         <div className="flex gap-4">
                             <div className="flex-1 bg-slate-50 p-6 rounded-2xl border border-slate-100">
                                 <div className="text-4xl font-black text-amber-500 mb-2">PTS</div>
-                                <div className="font-bold text-slate-700 text-sm">活動に応じて<br />ポイント獲得</div>
+                                <div className="font-bold text-slate-700 text-sm">
+                                    <span className="inline-block">活動に応じて</span>
+                                    <span className="inline-block">ポイント獲得</span>
+                                </div>
                             </div>
                             <div className="flex-1 bg-slate-50 p-6 rounded-2xl border border-slate-100">
                                 <div className="text-4xl font-black text-rose-500 mb-2">GIFT</div>
-                                <div className="font-bold text-slate-700 text-sm">地域のお店で<br />お得に利用</div>
+                                <div className="font-bold text-slate-700 text-sm">
+                                    <span className="inline-block">地域のお店で</span>
+                                    <span className="inline-block">お得に利用</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -169,12 +175,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500 rounded-full blur-[100px] opacity-30"></div>
 
                     <h2 className="text-3xl md:text-5xl font-black text-white mb-8 relative z-10">
-                        あなたの街での暮らしを、<br />
-                        もっとスマートに。
+                        <span className="inline-block">あなたの街での暮らしを、</span>
+                        <span className="inline-block">もっとスマートに。</span>
                     </h2>
                     <p className="text-slate-400 mb-10 text-lg relative z-10">
-                        Saitama BASEは、地域と人をつなぐ新しいプラットフォームです。<br />
-                        まずはLINEログインで、体験してみてください。
+                        <span className="inline-block">Saitama BASEは、地域と人をつなぐ</span><span className="inline-block">新しいプラットフォームです。</span><br className="hidden md:block" />
+                        <span className="inline-block">まずはLINEログインで、</span><span className="inline-block">体験してみてください。</span>
                     </p>
 
                     <button
