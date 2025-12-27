@@ -4,7 +4,7 @@ import { getLocalAssistantResponse } from '../services/geminiService';
 
 const AIChat: React.FC = () => {
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>([
-    { role: 'assistant', content: 'こんにちは！Saitama BASE 専属AIアシスタントです。埼玉県内の地域情報、歴史、行政ルール、お勧めのスポットなど、何でも聞いてください。あなたの地域貢献をサポートします！' }
+    { role: 'assistant', content: 'こんにちは！回覧板BASE 専属AIアシスタントです。埼玉県内の地域情報、歴史、行政ルール、お勧めのスポットなど、何でも聞いてください。あなたの地域貢献をサポートします！' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -49,11 +49,10 @@ const AIChat: React.FC = () => {
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50">
         {messages.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] p-5 rounded-3xl text-sm leading-relaxed shadow-sm font-medium ${
-              msg.role === 'user' 
-                ? 'bg-emerald-600 text-white rounded-tr-none' 
+            <div className={`max-w-[85%] p-5 rounded-3xl text-sm leading-relaxed shadow-sm font-medium ${msg.role === 'user'
+                ? 'bg-emerald-600 text-white rounded-tr-none'
                 : 'bg-white text-slate-800 border border-slate-100 rounded-tl-none'
-            }`}>
+              }`}>
               {msg.content}
             </div>
           </div>

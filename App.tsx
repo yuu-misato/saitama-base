@@ -418,7 +418,7 @@ const App: React.FC = () => {
           <header className="w-full max-w-lg flex items-center justify-between mb-8">
             <div className="flex items-center gap-2 font-black text-indigo-600">
               <span className="w-8 h-8 bg-indigo-600 text-white rounded-lg flex items-center justify-center">S</span>
-              Saitama BASE
+              回覧板BASE
             </div>
             <button onClick={() => setPublicCommunity(null)} className="text-xs font-bold text-slate-400">ログイン</button>
           </header>

@@ -128,8 +128,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                                                 key={city}
                                                 onClick={() => toggleInterestArea(city)}
                                                 className={`text-xs font-bold py-2 px-4 rounded-full transition-all border ${interestAreas.includes(city)
-                                                        ? 'bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-200'
-                                                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                                                    ? 'bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-200'
+                                                    : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                                                     }`}
                                             >
                                                 {interestAreas.includes(city) && <i className="fas fa-check mr-1"></i>}
@@ -173,7 +173,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                     <div className="flex items-center gap-2 font-black text-2xl tracking-tighter text-slate-900">
                         <span className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center text-white text-base">S</span>
-                        Saitama BASE
+                        回覧板BASE
                     </div>
                     <button
                         onClick={onLogin}
@@ -256,7 +256,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                             <span className="inline-block">"待つ"ものから"届く"ものへ。</span>
                         </h2>
                         <p className="text-slate-500 text-lg leading-relaxed mb-8">
-                            Saitama BASEなら、地域のお知らせがLINEやアプリに直接届きます。
+                            回覧板BASEなら、地域のお知らせがLINEやアプリに直接届きます。
                             旅行中でも、仕事中でも、大切な情報を見逃すことはありません。
                             「次は誰に回すんだっけ？」という悩みからも解放されます。
                         </p>
@@ -340,7 +340,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                         <span className="inline-block">もっとスマートに。</span>
                     </h2>
                     <p className="text-slate-400 mb-10 text-lg relative z-10">
-                        <span className="inline-block">Saitama BASEは、地域と人をつなぐ</span><span className="inline-block">新しいプラットフォームです。</span><br className="hidden md:block" />
+                        <span className="inline-block">回覧板BASEは、地域と人をつなぐ</span><span className="inline-block">新しいプラットフォームです。</span><br className="hidden md:block" />
                         <span className="inline-block">まずはLINEログインで、</span><span className="inline-block">体験してみてください。</span>
                     </p>
 
@@ -359,10 +359,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="flex items-center gap-2 font-black text-xl text-slate-900">
                         <span className="w-6 h-6 bg-slate-900 rounded flex items-center justify-center text-white text-xs">S</span>
-                        Saitama BASE
+                        回覧板BASE
                     </div>
                     <p className="text-slate-400 text-sm font-bold">
-                        &copy; 2025 Saitama BASE All rights reserved.
+                        &copy; 2025 回覧板BASE All rights reserved.
                     </p>
                 </div>
             </footer>

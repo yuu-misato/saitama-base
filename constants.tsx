@@ -38,7 +38,7 @@ export const INITIAL_POSTS: Post[] = [
     category: 'notice',
     area: 'さいたま市大宮区',
     title: '【重要】氷川神社付近の清掃活動',
-    content: '今週末、氷川参道の清掃ボランティアを募集します。参加者にはSaitama BASEポイントを50pts付与します！',
+    content: '今週末、氷川参道の清掃ボランティアを募集します。参加者には回覧板BASEポイントを50pts付与します！',
     likes: 24,
     comments: [],
     createdAt: '2024-05-10T09:00:00Z'
@@ -49,7 +49,7 @@ export const MOCK_KAIRANBAN: Kairanban[] = [
   {
     id: 'k1',
     title: '令和6年度 自治会費の納入について',
-    content: '今年度の自治会費の集金を開始します。キャッシュレス決済（Saitama BASE Pay）でも納入可能になりました。詳細は掲示板をご確認ください。',
+    content: '今年度の自治会費の集金を開始します。キャッシュレス決済（回覧板BASE Pay）でも納入可能になりました。詳細は掲示板をご確認ください。',
     area: 'さいたま市大宮区',
     author: '大宮三丁目町会 役員会',
     points: 10,
