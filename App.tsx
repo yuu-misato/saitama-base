@@ -14,6 +14,7 @@ import { supabase, getPosts, createPost, createKairanbanWithNotification, regist
 import { summarizeLocalFeed } from './services/geminiService';
 
 import { PostSkeleton } from './components/Skeleton';
+import EmptyState from './components/EmptyState';
 import Toast, { ToastMessage } from './components/Toast';
 import RegistrationModal from './components/RegistrationModal';
 
@@ -668,7 +669,20 @@ const App: React.FC = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {posts.map(post => <PostCard key={post.id} post={post} onLike={() => addScore(2)} />)}
+                {isLoading ? (
+                  <>
+                    <PostSkeleton />
+                    <PostSkeleton />
+                    <PostSkeleton />
+                  </>
+                ) : posts.length === 0 ? (
+                  <EmptyState
+                    title="まだ投稿がありません"
+                    description="この地域の最初の投稿を作成してみましょう！"
+                  />
+                ) : (
+                  posts.map(post => <PostCard key={post.id} post={post} onLike={() => addScore(2)} />)
+                )}
               </div>
             )}
           </div>
