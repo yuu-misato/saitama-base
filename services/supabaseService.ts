@@ -22,8 +22,14 @@ export const createProfile = async (user: any) => { // Changed User to any for s
       level: user.level || 1,
       score: user.score || 0,
       selected_areas: user.selectedAreas,
-    })
+    }, { onConflict: 'id' }) // Explicitly handle conflicts on 'id'
     .select();
+
+  if (error) {
+    console.error('FAILED TO SAVE PROFILE TO DB:', error);
+  } else {
+    console.log('Profile saved successfully:', data);
+  }
   return { data, error };
 };
 
