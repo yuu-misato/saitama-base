@@ -286,10 +286,10 @@ const App: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
-    // 1. Redirect URIの動的生成（クエリパラメータを除去）
-    const baseUrl = window.location.origin + window.location.pathname;
-    // 末尾のスラッシュを除去（LINEの設定と一致させるため）
-    const redirectUri = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    // 1. Redirect URIの動的生成
+    // 注意: LINE Developers Consoleに登録したCallback URLと"完全一致"する必要があります。
+    // スラッシュの有無も区別されるため、ブラウザの挙動に合わせてスラッシュを残します。
+    const redirectUri = window.location.origin + window.location.pathname;
 
     console.log('🔗 LINE Login Redirect URI:', redirectUri);
 
