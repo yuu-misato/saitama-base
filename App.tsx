@@ -36,6 +36,7 @@ const App: React.FC = () => {
   const [newPost, setNewPost] = useState({ title: '', content: '', category: 'notice' as PostCategory, area: '' });
   const [newMission, setNewMission] = useState({ title: '', description: '', points: 50, area: '', date: '', maxParticipants: 5 }); // New state
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  // State for popups
   const [showScorePopup, setShowScorePopup] = useState<{ show: boolean, amount: number }>({ show: false, amount: 0 });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
