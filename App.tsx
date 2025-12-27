@@ -48,13 +48,12 @@ const App: React.FC = () => {
 
   // 永続化ログイン & Supabase Auth 状態監視
   useEffect(() => {
-    // ... (Keep existing auth logic)
     // 1. まずローカルストレージを確認 (優先)
     const storedUserId = localStorage.getItem('saitama_user_id');
     if (storedUserId) {
       getProfile(storedUserId).then(({ data, error }) => {
         if (data && !error) {
-          console.log('Auto-login successful:', data);
+          console.log('Restoring session for user:', data.nickname);
           setUser({
             id: data.id,
             nickname: data.nickname,
@@ -65,23 +64,21 @@ const App: React.FC = () => {
             selectedAreas: data.selected_areas || ['さいたま市大宮区'],
             isLineConnected: true
           });
-          // エリア情報も更新して、フィードを再取得できるようにする
           setSelectedAreas(data.selected_areas || ['さいたま市大宮区']);
-          return; // 自動ログイン成功ならここで終了
         } else {
           // IDはあるがDBにない場合（削除された等）、クリアする
           localStorage.removeItem('saitama_user_id');
         }
       });
-    } else {
-      // If no user logic needs to be here if needed
     }
 
     // 2. Supabase Auth (今回は未使用だが残す)
-    supabase.auth.onAuthStateChange((_event, session) => {
-      // ... (Keep as is)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Logic for supabase auth if integrated later
     });
-  }, []); // Remove dependency on user to avoid loop? No, empty dependency array for mount.
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // 実データのフェッチ（全ての共通データ）
   useEffect(() => {
@@ -89,7 +86,7 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     const promises = [
-      getPosts(selectedAreas),
+      getPosts(selectedAreas), // User's selected areas
       getKairanbans(),
       getCoupons(),
       getMissions()
