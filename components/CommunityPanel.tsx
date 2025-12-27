@@ -135,6 +135,38 @@ const CommunityPanel: React.FC<CommunityPanelProps> = ({ user, myCommunities, on
                 </div>
             )}
 
+            {/* 招待セクション */}
+            <div className="mt-8 bg-amber-50 rounded-[2.5rem] p-8 border border-amber-100 relative overflow-hidden">
+                <div className="relative z-10">
+                    <h3 className="font-black text-xl text-amber-800 mb-2 flex items-center gap-2">
+                        <i className="fas fa-search-location"></i>
+                        自治会・商店会が見つからない？
+                    </h3>
+                    <p className="text-amber-700/80 font-bold text-sm mb-6 leading-relaxed">
+                        あなたの所属する団体がまだ回覧板BASEを使っていない場合は、ぜひ紹介してください！<br />
+                        紹介した団体が登録すると、あなたに<span className="text-rose-500 font-black text-lg mx-1">500pt</span>プレゼント！
+                    </p>
+
+                    <button
+                        onClick={() => {
+                            const text = `回覧板BASEを使って、私たちの地域活動をもっとスマートにしませんか？\nデジタル回覧板で連絡がスムーズになります！\n\n▼詳細はこちらから（私の紹介コード: ${user.id.substring(0, 8)}）\nhttps://kairanban-base.com?ref=${user.id}`;
+                            const url = `https://line.me/R/msg/text/?${encodeURIComponent(text)}`;
+                            window.open(url, '_blank');
+                        }}
+                        className="w-full py-4 bg-[#06C755] text-white font-black rounded-2xl shadow-lg shadow-emerald-200 hover:bg-[#05b34c] transition-all flex items-center justify-center gap-2 active:scale-95"
+                    >
+                        <i className="fab fa-line text-2xl"></i>
+                        LINEで役員・知り合いにお勧めする
+                    </button>
+                    <p className="text-[10px] text-amber-600/60 font-bold text-center mt-3">
+                        ※紹介コード経由で団体登録が完了するとポイントが付与されます
+                    </p>
+                </div>
+                <div className="absolute -bottom-10 -right-10 text-9xl text-amber-500/10">
+                    <i className="fas fa-bullhorn transform -rotate-12"></i>
+                </div>
+            </div>
+
             {/* リスト */}
             <div className="space-y-4">
                 <h3 className="font-black text-slate-400 text-sm px-4">参加中のコミュニティ</h3>
