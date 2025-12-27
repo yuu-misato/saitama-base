@@ -796,7 +796,7 @@ const App: React.FC = () => {
                 </div>
               </div>
               <a
-                href="https://line.me/R/ti/p/@saitamabase"
+                href="https://line.me/R/ti/p/@357rcjnp"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-[#06C755] text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-[#05b34c] transition-colors"
