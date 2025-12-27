@@ -121,20 +121,25 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                                     <i className="fas fa-heart text-rose-500"></i>
                                     気になる地域（複数選択可）
                                 </label>
-                                <div className="h-40 overflow-y-auto bg-slate-50 rounded-2xl p-4 border border-slate-100 grid grid-cols-2 gap-2">
-                                    {SAITAMA_MUNICIPALITIES.filter(city => city !== livingArea).map(city => (
-                                        <button
-                                            key={city}
-                                            onClick={() => toggleInterestArea(city)}
-                                            className={`text-xs font-bold py-2 px-3 rounded-xl transition-all text-left truncate ${interestAreas.includes(city)
-                                                    ? 'bg-rose-50 text-rose-600 ring-2 ring-rose-500/20'
-                                                    : 'bg-white text-slate-500 hover:bg-slate-200'
-                                                }`}
-                                        >
-                                            {interestAreas.includes(city) && <i className="fas fa-check mr-1"></i>}
-                                            {city}
-                                        </button>
-                                    ))}
+                                <div className="max-h-60 overflow-y-auto bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                    <div className="flex flex-wrap gap-2">
+                                        {SAITAMA_MUNICIPALITIES.filter(city => city !== livingArea).map(city => (
+                                            <button
+                                                key={city}
+                                                onClick={() => toggleInterestArea(city)}
+                                                className={`text-xs font-bold py-2 px-4 rounded-full transition-all border ${interestAreas.includes(city)
+                                                        ? 'bg-rose-500 text-white border-rose-500 shadow-lg shadow-rose-200'
+                                                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                                                    }`}
+                                            >
+                                                {interestAreas.includes(city) && <i className="fas fa-check mr-1"></i>}
+                                                {city}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="mt-4 text-center">
+                                        <p className="text-[10px] text-slate-400 font-bold">※選択したエリアの情報もタイムラインに表示されます</p>
+                                    </div>
                                 </div>
                             </div>
 
