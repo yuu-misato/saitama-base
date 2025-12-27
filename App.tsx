@@ -37,6 +37,7 @@ const App: React.FC = () => {
   const [newMission, setNewMission] = useState({ title: '', description: '', points: 50, area: '', date: '', maxParticipants: 5 }); // New state
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   // State for popups
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showScorePopup, setShowScorePopup] = useState<{ show: boolean, amount: number }>({ show: false, amount: 0 });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -297,6 +298,21 @@ const App: React.FC = () => {
 
     return () => subscription.unsubscribe();
   }, [user]);
+
+  const handleRegistrationComplete = async (nickname: string, areas: string[]) => {
+    if (user) {
+      const updatedUser = { ...user, nickname, selectedAreas: areas };
+      const { error } = await createProfile(updatedUser);
+      if (!error) {
+        setUser(updatedUser);
+        setSelectedAreas(areas);
+        setIsEditingProfile(false);
+        addToast('プロフィールを更新しました', 'success');
+      } else {
+        addToast('更新に失敗しました', 'error');
+      }
+    }
+  };
 
   // 事前登録フロー（情報入力 -> LINE認証）
   const handlePreRegister = (nickname: string, areas: string[]) => {
