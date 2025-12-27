@@ -209,7 +209,8 @@ const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     const state = params.get('state');
-    const savedState = sessionStorage.getItem('lineLoginState');
+    // Using localStorage for better mobile persistence
+    const savedState = localStorage.getItem('lineLoginState');
 
     if (code && state && savedState && state === savedState) {
       console.log('LINE Login successful (code received)');
@@ -217,28 +218,54 @@ const App: React.FC = () => {
 
       // 既にログイン済みなら何もしない
       if (localStorage.getItem('saitama_user_id')) {
-        sessionStorage.removeItem('lineLoginState');
+        localStorage.removeItem('lineLoginState');
         return;
       }
 
-      const role = sessionStorage.getItem('loginRole') as any || 'resident';
+      const role = localStorage.getItem('loginRole') as any || 'resident';
       const newUserId = crypto.randomUUID();
 
-      // LINEからの基本情報のみセットした仮ユーザー
+      // 事前入力情報の確認
+      const pendingRegStr = localStorage.getItem('pendingRegistration');
+      const pendingReg = pendingRegStr ? JSON.parse(pendingRegStr) : null;
+
+      // LINEからの基本情報
       const initialUser: User = {
         id: newUserId,
-        nickname: role === 'business' ? '店名未設定' : 'ゲスト', // デフォルト名
+        nickname: pendingReg?.nickname || (role === 'business' ? '店名未設定' : 'ゲスト'),
         role: role,
         avatar: role === 'business' ? 'https://api.dicebear.com/7.x/bottts/svg?seed=business' : 'https://api.dicebear.com/7.x/avataaars/svg?seed=lineuser',
         score: 150,
         level: 2,
-        selectedAreas: ['さいたま市大宮区'],
+        selectedAreas: pendingReg?.areas || ['さいたま市大宮区'],
         isLineConnected: true
       };
 
-      setTempUser(initialUser); // 登録モーダルを表示させるための一時保存
-      sessionStorage.removeItem('lineLoginState');
-      sessionStorage.removeItem('loginRole');
+      if (pendingReg) {
+        // 事前入力がある場合は即座に登録完了とする
+        createProfile(initialUser).then(({ error }) => {
+          if (error) console.error('Failed to sync profile', error);
+        });
+        localStorage.setItem('saitama_user_id', initialUser.id);
+        setUser(initialUser);
+
+        // コミュニティ招待の処理
+        const pendingInvite = localStorage.getItem('pendingInvite');
+        if (pendingInvite) {
+          addToast('登録完了！コミュニティに参加しました。', 'success');
+          localStorage.removeItem('pendingInvite');
+        } else {
+          addToast('登録が完了しました！', 'success');
+        }
+
+        localStorage.removeItem('pendingRegistration');
+      } else {
+        // 事前入力がない場合は確認モーダルへ（既存フロー維持）
+        setTempUser(initialUser);
+      }
+
+      localStorage.removeItem('lineLoginState');
+      localStorage.removeItem('loginRole');
     }
   }, []);
 
@@ -277,10 +304,10 @@ const App: React.FC = () => {
     setTempUser(null);
 
     // コミュニティ招待の処理
-    const pendingInvite = sessionStorage.getItem('pendingInvite');
+    const pendingInvite = localStorage.getItem('pendingInvite');
     if (pendingInvite) {
       addToast('登録完了！コミュニティに参加しました。', 'success');
-      sessionStorage.removeItem('pendingInvite');
+      localStorage.removeItem('pendingInvite');
     }
   };
 
@@ -305,7 +332,6 @@ const App: React.FC = () => {
     ============================================
     `);
 
-    // 画面下部にデバッグ表示（開発者だけでなくユーザーも確認できるように）
     if (isLocal) {
       addToast(`Debug: Redirect URI is ${redirectUri}`, 'info');
     }
@@ -318,12 +344,12 @@ const App: React.FC = () => {
     const state = Math.random().toString(36).substring(7);
     const nonce = Math.random().toString(36).substring(7); // OpenID Connect用
 
-    sessionStorage.setItem('lineLoginState', state);
-    sessionStorage.setItem('loginRole', role);
+    localStorage.setItem('lineLoginState', state); // Switched to localStorage
+    localStorage.setItem('loginRole', role);       // Switched to localStorage
 
     // コミュニティ招待中なら保存
     if (publicCommunity) {
-      sessionStorage.setItem('pendingInvite', publicCommunity.inviteCode);
+      localStorage.setItem('pendingInvite', publicCommunity.inviteCode); // Switched
     }
 
     // URL構築
@@ -342,6 +368,12 @@ const App: React.FC = () => {
 
     console.log('🚀 Redirecting to LINE Auth:', lineAuthUrl);
     window.location.href = lineAuthUrl;
+  };
+
+  // 事前登録フロー（情報入力 -> LINE認証）
+  const handlePreRegister = (nickname: string, areas: string[]) => {
+    localStorage.setItem('pendingRegistration', JSON.stringify({ nickname, areas }));
+    handleLineLogin('resident');
   };
 
   const addScore = (amount: number) => {
@@ -495,7 +527,10 @@ const App: React.FC = () => {
     }
 
     // 通常の未ログイン状態はランディングページを表示
-    return <LandingPage onLogin={() => handleLineLogin('resident')} />;
+    return <LandingPage
+      onLogin={() => handleLineLogin('resident')}
+      onPreRegister={handlePreRegister} // 新規フロー
+    />;
   }
 
 

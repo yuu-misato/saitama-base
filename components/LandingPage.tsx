@@ -1,12 +1,84 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { SAITAMA_MUNICIPALITIES } from '../constants'; // Import areas
 
 interface LandingPageProps {
     onLogin: () => void;
+    onPreRegister: (nickname: string, areas: string[]) => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => {
+    const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+    const [nickname, setNickname] = useState('');
+    const [selectedArea, setSelectedArea] = useState('さいたま市大宮区');
+
+    const handleRegister = () => {
+        if (!nickname) return;
+        onPreRegister(nickname, [selectedArea]);
+    };
+
     return (
         <div className="min-h-screen bg-white font-sans text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
+            {/* Registration Modal */}
+            {isRegisterOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl relative animate-in zoom-in-95 duration-200">
+                        <button
+                            onClick={() => setIsRegisterOpen(false)}
+                            className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200"
+                        >
+                            <i className="fas fa-times"></i>
+                        </button>
+
+                        <h3 className="text-2xl font-black text-center mb-2">新規登録</h3>
+                        <p className="text-slate-400 text-center text-sm font-bold mb-8">プロフィールを入力してLINE連携へ進みます</p>
+
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-500 pl-2">ニックネーム</label>
+                                <input
+                                    type="text"
+                                    value={nickname}
+                                    onChange={(e) => setNickname(e.target.value)}
+                                    placeholder="例: みやこん"
+                                    className="w-full bg-slate-50 px-5 py-4 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-emerald-500/20"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-black text-slate-500 pl-2">お住まいの地域</label>
+                                <div className="relative">
+                                    <select
+                                        value={selectedArea}
+                                        onChange={(e) => setSelectedArea(e.target.value)}
+                                        className="w-full bg-slate-50 px-5 py-4 rounded-2xl font-bold outline-none appearance-none focus:ring-2 focus:ring-emerald-500/20"
+                                    >
+                                        {SAITAMA_MUNICIPALITIES.map(city => (
+                                            <option key={city} value={city}>{city}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                                        <i className="fas fa-chevron-down"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleRegister}
+                                disabled={!nickname}
+                                className="w-full py-5 bg-[#06C755] text-white font-black rounded-2xl shadow-xl shadow-emerald-200 hover:bg-[#05b34c] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <i className="fab fa-line text-2xl"></i>
+                                LINE認証して登録完了
+                            </button>
+
+                            <p className="text-[10px] text-center text-slate-400 font-bold">
+                                登録ボタンを押すことで、利用規約に同意したものとみなします。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Navigation */}
             <nav className="fixed w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -47,7 +119,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-in slide-in-from-bottom fade-in duration-700 delay-300">
                         <button
-                            onClick={onLogin}
+                            onClick={() => setIsRegisterOpen(true)}
                             className="w-full sm:w-auto px-8 py-4 bg-[#06C755] text-white rounded-2xl font-black text-lg shadow-xl shadow-emerald-200 hover:bg-[#05b34c] transition-all hover:-translate-y-1 flex items-center justify-center gap-3"
                         >
                             <i className="fab fa-line text-2xl"></i>
@@ -184,7 +256,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
                     </p>
 
                     <button
-                        onClick={onLogin}
+                        onClick={() => setIsRegisterOpen(true)}
                         className="px-10 py-5 bg-[#06C755] text-white rounded-2xl font-black text-xl shadow-lg shadow-emerald-900/50 hover:bg-[#05b34c] hover:scale-105 transition-all relative z-10 flex items-center justify-center gap-3 mx-auto"
                     >
                         <i className="fab fa-line text-3xl"></i>
