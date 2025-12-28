@@ -66,13 +66,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { isRestoring: isAutoRestoring } = useAutoSessionRestore(!!session);
 
     const checkSession = async () => {
-        const { data: { session: s } } = await supabase.auth.getSession();
-        setSession(s);
-        if (s) {
-            await loadProfile(s.user.id);
+        try {
+            // Race against a timeout to prevent infinite loading
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Session check timed out')), 5000)
+            );
+
+            const sessionPromise = supabase.auth.getSession();
+
+            const { data: { session: s } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+
+            setSession(s);
+            if (s) {
+                await loadProfile(s.user.id);
+            }
+        } catch (e) {
+            console.error('Session check error or timeout:', e);
+            // On error/timeout, assume no session to allow UI to render
+            setSession(null);
+        } finally {
+            setIsAuthChecking(false);
+            setIsLoading(false);
         }
-        setIsAuthChecking(false);
-        setIsLoading(false);
     };
 
     useEffect(() => {

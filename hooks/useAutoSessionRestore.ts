@@ -31,12 +31,19 @@ export const useAutoSessionRestore = (hasSession: boolean): AutoSessionRestoreRe
             setError(null);
 
             try {
-                const { data, error: funcError } = await supabase.functions.invoke('line-login', {
+                // Add Timeout for auto-restore
+                const restorePromise = supabase.functions.invoke('line-login', {
                     body: {
                         action: 'auto_restore',
                         line_user_id: savedLineUserId,
                     },
                 });
+
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Auto-restore timed out')), 5000)
+                );
+
+                const { data, error: funcError } = await Promise.race([restorePromise, timeoutPromise]) as any;
 
                 if (funcError) {
                     throw new Error(funcError.message);
@@ -68,6 +75,10 @@ export const useAutoSessionRestore = (hasSession: boolean): AutoSessionRestoreRe
             } catch (err) {
                 logger.error('Auto restore error:', err);
                 setError(err instanceof Error ? err.message : 'Unknown error');
+                // Force clear to prevent loop if error persists
+                if (err instanceof Error && (err.message.includes('timeout') || err.message.includes('Function'))) {
+                    localStorage.removeItem('linked_line_user_id');
+                }
             } finally {
                 setIsRestoring(false);
             }
