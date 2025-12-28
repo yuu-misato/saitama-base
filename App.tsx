@@ -1116,7 +1116,18 @@ const App: React.FC = () => {
           </>
         );
       case 'coupons':
-        return <CouponList coupons={coupons} currentScore={score} selectedAreas={selectedAreas} />;
+        return (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] shadow-sm border border-slate-100">
+            <div className="w-24 h-24 bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl shadow-xl shadow-orange-200 flex items-center justify-center text-4xl text-white mb-6">
+              <i className="fas fa-ticket-alt"></i>
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 mb-2">Coming Soon</h3>
+            <p className="text-slate-500 font-bold mb-8">地域クーポン機能は現在準備中です</p>
+            <div className="px-6 py-3 bg-slate-50 rounded-2xl text-slate-400 font-bold border-2 border-slate-100 border-dashed">
+              楽しみにお待ちください！ 🎁
+            </div>
+          </div>
+        );
       case 'business':
         return <BusinessPanel user={user} onRegisterCoupon={handleRegisterCoupon} myCoupons={coupons.filter(c => c.shopName === user.shopName)} />;
       case 'admin':
