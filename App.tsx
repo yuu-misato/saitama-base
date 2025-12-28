@@ -19,6 +19,7 @@ import { PostSkeleton } from './components/Skeleton';
 import EmptyState from './components/EmptyState';
 import Toast, { ToastMessage } from './components/Toast';
 import RegistrationModal from './components/RegistrationModal';
+import AIChat from './components/AIChat';
 
 const App: React.FC = () => {
   // isLoading from hook is renamed to avoid conflict with content loading state
