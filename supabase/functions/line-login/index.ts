@@ -13,126 +13,179 @@ serve(async (req) => {
     }
 
     try {
-        const { code, redirectUri } = await req.json()
+        const reqData = await req.json()
+        const { action } = reqData
 
-        // 1. Check Env Vars
-        const clientId = Deno.env.get('LINE_CHANNEL_ID')
-        const clientSecret = Deno.env.get('LINE_CHANNEL_SECRET')
+        // Environment Variables
+        const channelId = Deno.env.get('LINE_CHANNEL_ID')
+        const channelSecret = Deno.env.get('LINE_CHANNEL_SECRET')
         const supabaseUrl = Deno.env.get('SUPABASE_URL')
-        const supabaseServiceRoleKey = Deno.env.get('SERVICE_ROLE_KEY')
+        const serviceRoleKey = Deno.env.get('SERVICE_ROLE_KEY')
 
-        if (!clientId || !clientSecret || !supabaseUrl || !supabaseServiceRoleKey) {
+        if (!channelId || !channelSecret || !supabaseUrl || !serviceRoleKey) {
             throw new Error('Missing environment variables')
         }
 
-        // 2. Exchange code for tokens
-        const params = new URLSearchParams()
-        params.append('grant_type', 'authorization_code')
-        params.append('code', code)
-        params.append('redirect_uri', redirectUri)
-        params.append('client_id', clientId)
-        params.append('client_secret', clientSecret)
+        const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 
-        const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params
-        })
-
-        const tokenData = await tokenRes.json()
-
-        if (!tokenRes.ok) {
-            console.error('LINE Token Error:', tokenData)
-            throw new Error(tokenData.error_description || 'Failed to get tokens from LINE')
+        // Helper: Find User by LINE ID (via Metadata)
+        // Note: listUsers() is not efficient for large datasets. 
+        // Ideally, use a dedicated table or query by email if predictable.
+        const findUserByLineId = async (lineUserId: string) => {
+            const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers()
+            if (error) throw error
+            // Search in metadata
+            return users.find(u => u.user_metadata?.line_user_id === lineUserId)
         }
 
-        // 3. Get User Profile from ID Token requires verification/decoding
-        // But simplest is to use Access Token to get Profile
-        const profileRes = await fetch('https://api.line.me/v2/profile', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` }
-        })
-        const profileData = await profileRes.json()
+        // Helper: Get or Create User and Generate Session
+        const getOrCreateUserSession = async (lineProfile: any) => {
+            const { userId: lineUserId, displayName, pictureUrl } = lineProfile
+            // Email placeholder
+            const email = `${lineUserId}@line.login.placeholder`
 
-        if (!profileRes.ok) {
-            throw new Error('Failed to get user profile from LINE')
-        }
+            let userId: string | undefined
+            const existingUser = await findUserByLineId(lineUserId)
 
-        const lineUserId = profileData.userId
-        const displayName = profileData.displayName
-        const pictureUrl = profileData.pictureUrl
-        // create a fake email for mapping
-        const email = `${lineUserId}@line.login.placeholder`
-
-        // 4. Admin Auth
-        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
-
-        // Check if user exists, if not create
-        const { data: users, error: findError } = await supabaseAdmin.auth.admin.listUsers()
-        // Simple verification (in production, use stricter query if possible)
-        // Supabase listUsers might not scale indefinitely, but good for now or use getUserByEmail if available via wrapper?
-        // Actually createClient admin api has createUser which fails if exists? No, it returns error.
-
-        // Let's try to get by email directly? No direct API for getByEmail in early versions? 
-        // Actually listUsers is fine for small scale, but better:
-
-        // Try to create user. If fails (email taken), then just proceed.
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-            email: email,
-            email_confirm: true,
-            user_metadata: {
-                nickname: displayName,
-                avatar_url: pictureUrl,
-                line_user_id: lineUserId
-            }
-        })
-
-        let userId = newUser?.user?.id
-
-        if (createError) {
-            // Assume user exists loop
-            // Find user by email manually (or trust it exists)
-            // Note: listUsers is paginated.
-            // A better way is:
-            const { data: { users } } = await supabaseAdmin.auth.admin.listUsers()
-            const found = users.find(u => u.email === email)
-            if (found) {
-                userId = found.id
-                // Update metadata just in case
+            if (existingUser) {
+                userId = existingUser.id
+                // Update metadata
                 await supabaseAdmin.auth.admin.updateUserById(userId, {
                     user_metadata: {
+                        line_user_id: lineUserId,
                         nickname: displayName,
                         avatar_url: pictureUrl,
-                        line_user_id: lineUserId
+                        line_display_name: displayName,
+                        line_picture_url: pictureUrl
                     }
                 })
             } else {
-                // If creation failed but user not found? (Checking specific error usually)
-                throw new Error('Failed to create or find user: ' + createError.message)
+                // Check if email already exists (edge case)
+                // If we use placeholder email, this only happens if we reuse the logic
+                // Try create
+                const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+                    email: email,
+                    email_confirm: true,
+                    user_metadata: {
+                        line_user_id: lineUserId,
+                        nickname: displayName,
+                        avatar_url: pictureUrl,
+                        line_display_name: displayName,
+                        line_picture_url: pictureUrl
+                    }
+                })
+
+                if (createError) {
+                    // Try to find by email if create failed (e.g. email already registered)
+                    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers()
+                    const foundByEmail = users.find(u => u.email === email)
+                    if (foundByEmail) {
+                        userId = foundByEmail.id
+                    } else {
+                        throw new Error(`Failed to create user: ${createError.message}`)
+                    }
+                } else {
+                    userId = newUser.user?.id
+                }
+            }
+
+            if (!userId) throw new Error('User ID resolution failed')
+
+            // Generate Magic Link Token
+            const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+                type: 'magiclink',
+                email: email,
+            })
+
+            if (linkError) throw linkError
+
+            return {
+                token_hash: linkData.properties.hashed_token,
+                user_id: userId,
+                line_user_id: lineUserId
             }
         }
 
-        // 5. Generate Magic Link for instant login
-        const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-            type: 'magiclink',
-            email: email,
-            options: {
-                redirectTo: redirectUri
-            }
-        })
+        // --- ACTION HANDLERS ---
 
-        if (linkError) {
-            throw new Error('Failed to generate login link: ' + linkError.message)
+        // 1. LIFF Login (Auto Login inside LINE App)
+        if (action === 'liff_login') {
+            const { liff_access_token } = reqData
+            if (!liff_access_token) throw new Error('Missing liff_access_token')
+
+            // Verify Token & Get Profile directly from LINE
+            const profileRes = await fetch('https://api.line.me/v2/profile', {
+                headers: { Authorization: `Bearer ${liff_access_token}` }
+            })
+
+            if (!profileRes.ok) throw new Error('Invalid LIFF access token')
+            const profile = await profileRes.json()
+
+            const sessionData = await getOrCreateUserSession(profile)
+
+            return new Response(JSON.stringify(sessionData), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
         }
 
-        return new Response(
-            JSON.stringify({
-                redirectUrl: linkData.properties.action_link
-            }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+        // 2. Web Login (Callback from OAuth)
+        // Support legacy 'code' at root for compatibility if needed, but we prefer 'action'
+        const code = reqData.code || (action === 'callback' ? reqData.code : null);
+
+        if (code) {
+            const { redirectUri } = reqData
+            if (!redirectUri) throw new Error('Missing redirectUri')
+
+            // Exchange Code
+            const params = new URLSearchParams()
+            params.append('grant_type', 'authorization_code')
+            params.append('code', code)
+            params.append('redirect_uri', redirectUri)
+            params.append('client_id', channelId)
+            params.append('client_secret', channelSecret)
+
+            const tokenRes = await fetch('https://api.line.me/oauth2/v2.1/token', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params
+            })
+            const tokenData = await tokenRes.json()
+            if (!tokenRes.ok) throw new Error(tokenData.error_description || 'Token exchange failed')
+
+            // Get Profile
+            const profileRes = await fetch('https://api.line.me/v2/profile', {
+                headers: { Authorization: `Bearer ${tokenData.access_token}` }
+            })
+            if (!profileRes.ok) throw new Error('Profile fetch failed')
+            const profile = await profileRes.json()
+
+            const sessionData = await getOrCreateUserSession(profile)
+
+            return new Response(JSON.stringify(sessionData), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+        }
+
+        // 3. Get Auth URL (for Web Login button)
+        if (action === 'get_auth_url') {
+            const { redirectUri } = reqData
+            const state = crypto.randomUUID()
+            const url = new URL('https://access.line.me/oauth2/v2.1/authorize')
+            url.searchParams.set('response_type', 'code')
+            url.searchParams.set('client_id', channelId)
+            url.searchParams.set('redirect_uri', redirectUri)
+            url.searchParams.set('state', state)
+            url.searchParams.set('scope', 'profile openid')
+
+            return new Response(JSON.stringify({ auth_url: url.toString(), state }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+        }
+
+        throw new Error(`Unknown action: ${action}`)
 
     } catch (error) {
-        console.error('Error:', error)
+        console.error('LINE Login Error:', error)
         return new Response(
             JSON.stringify({ error: error.message }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }

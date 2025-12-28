@@ -8,6 +8,7 @@ import CommunityPanel from './components/CommunityPanel';
 import BusinessPanel from './components/BusinessPanel';
 import LandingPage from './components/LandingPage';
 import { useAuth } from './hooks/useAuth';
+import { useLiffAutoAuth } from './hooks/useLiffAutoAuth';
 import { User, Post, PostCategory, Coupon, Kairanban, VolunteerMission, Community } from './types';
 import { SAITAMA_MUNICIPALITIES, MUNICIPALITY_COORDINATES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
 import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons, getMissions, createMission, joinMission, addComment, toggleLike } from './services/supabaseService';
@@ -24,8 +25,23 @@ import AreaSelectModal from './components/AreaSelectModal';
 
 const App: React.FC = () => {
   // isLoading from hook is renamed to avoid conflict with content loading state
-  const { user, setUser, tempUser, setTempUser, isLoading: isAuthLoading, isAuthChecking, logout } = useAuth();
+  const {
+    user,
+    setUser,
+    isLoading: isAuthLoading,
+    isAuthChecking: isSupabaseAuthChecking,
+    logout,
+    revalidateProfile
+  } = useAuth();
 
+  // LIFF Auto Auth
+  const { isLiffProcessing, isRestoring: isLiffRestoring } = useLiffAutoAuth(
+    !!user,
+    () => revalidateProfile()
+  );
+
+  // Combine auth checking states
+  const isAuthChecking = isSupabaseAuthChecking || isLiffProcessing || isLiffRestoring;
   const [activeTab, setActiveTab] = useState('feed');
   const [isLoading, setIsLoading] = useState(false); // Content loading state
   const [posts, setPosts] = useState<Post[]>([]);
@@ -176,29 +192,51 @@ const App: React.FC = () => {
 
   // LINE Login Callback Handler
   useEffect(() => {
+    // URLからcodeを取得して検証
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     const state = params.get('state');
 
     if (code && state) {
       const handleCallback = async () => {
-        // Clean URL first to prevent loop
+        // Remove code from URL immediately to prevent reuse
         window.history.replaceState({}, '', window.location.pathname);
 
-        addToast('LINE認証中... サーバーと通信しています', 'info');
         try {
+          // addToast('LINEログイン処理中...', 'info'); // Optional
+          const redirectUri = window.location.origin + window.location.pathname;
+
           const { data, error } = await supabase.functions.invoke('line-login', {
-            body: { code, redirectUri: window.location.origin }
+            body: {
+              action: 'callback',
+              code,
+              redirectUri
+            },
           });
+
           if (error) throw error;
-          if (data?.redirectUrl) {
-            window.location.href = data.redirectUrl;
+          if (data?.error) throw new Error(data.error);
+
+          if (data?.token_hash) {
+            const { error: otpError } = await supabase.auth.verifyOtp({
+              token_hash: data.token_hash,
+              type: 'magiclink'
+            });
+
+            if (otpError) throw otpError;
+
+            addToast('ログインしました', 'success');
+            // useAuth hook (onAuthStateChange) will pick up the session
+          } else {
+            throw new Error('セッション情報の取得に失敗しました');
           }
-        } catch (e) {
-          console.error('LINE Login Error:', e);
-          addToast('認証に失敗しました。再試行してください。', 'error');
+
+        } catch (error) {
+          console.error('Login Callback Error:', error);
+          addToast('ログイン処理に失敗しました', 'error');
         }
       };
+
       handleCallback();
     }
   }, []);
