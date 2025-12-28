@@ -47,8 +47,10 @@ const App: React.FC = () => {
     setToasts(prev => [...prev, { id, type, message }]);
   };
 
-  // 永続化ログイン & Supabase Auth 状態監視
+  // 認証初期化 & セッション監視
   useEffect(() => {
+    let mounted = true;
+
     // 0. URLからの管理モード強制起動 (デバッグ用)
     const params = new URLSearchParams(window.location.search);
     if (params.get('admin_mode') === 'true') {
@@ -64,124 +66,149 @@ const App: React.FC = () => {
       };
       setUser(adminUser);
       setActiveTab('admin');
+      setIsAuthChecking(false);
       addToast('デバッグ用管理者モードで起動しました', 'info');
       return;
     }
 
-    // 1. まずローカルストレージを確認 (優先)
-    const storedUserId = localStorage.getItem('saitama_user_id');
-    // params is already declared above
-    const hasCode = params.get('code');
-    const hasState = params.get('state');
-    const hasHash = window.location.hash.includes('access_token') || window.location.hash.includes('type=recovery');
+    const initAuth = async () => {
+      try {
+        // 1. Supabase Session Check (Handles Magic Link Hash automatically)
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-    if (storedUserId) {
-      getProfile(storedUserId).then(({ data, error }) => {
-        if (data && !error) {
-          console.log('Restoring session for user:', data.nickname);
-          setUser({
-            id: data.id,
-            nickname: data.nickname,
-            role: data.role as any,
-            avatar: data.avatar_url,
-            score: data.score,
-            level: data.level,
-            selectedAreas: data.selected_areas || ['さいたま市大宮区'],
-            isLineConnected: true
-          });
-          setSelectedAreas(data.selected_areas || ['さいたま市大宮区']);
-          setIsAuthChecking(false); // Restore complete
+        if (session?.user) {
+          console.log('Active Supabase Session found:', session.user.id);
+          await loadUserData(session.user.id, session.user);
         } else {
-          // IDはあるがDBにない場合（削除された等）、クリアする
-          localStorage.removeItem('saitama_user_id');
-          // If we are about to process LINE login or Hash redirect, keep loading
-          if ((!hasCode || !hasState) && !hasHash) {
-            setIsAuthChecking(false);
+          // 2. No active session, check Local Storage (Legacy/Manual persistence)
+          const storedUserId = localStorage.getItem('saitama_user_id');
+          // Check if we are in a text-flow (LINE login callback)
+          const hasCode = params.get('code');
+          const hasState = params.get('state');
+
+          if (storedUserId) {
+            console.log('Restoring from LocalStorage:', storedUserId);
+            const { data: profile } = await getProfile(storedUserId);
+            if (profile) {
+              const appUser: User = {
+                id: profile.id,
+                nickname: profile.nickname || '名無し',
+                role: profile.role as any || 'resident',
+                avatar: profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.id,
+                score: profile.score || 0,
+                level: profile.level || 1,
+                selectedAreas: profile.selected_areas || ['さいたま市大宮区'],
+                isLineConnected: true
+              };
+              if (mounted) {
+                setUser(appUser);
+                setSelectedAreas(appUser.selectedAreas);
+                setIsAuthChecking(false);
+              }
+            } else {
+              localStorage.removeItem('saitama_user_id');
+              // No valid stored user. If not Line callback, stop loading.
+              if (!hasCode || !hasState) {
+                if (mounted) setIsAuthChecking(false);
+              }
+            }
+          } else {
+            // No stored session. If not handling callback, stop loading.
+            if (!hasCode || !hasState) {
+              if (mounted) setIsAuthChecking(false);
+            }
           }
         }
-      }).catch(() => {
-        if ((!hasCode || !hasState) && !hasHash) setIsAuthChecking(false);
-      });
-    } else {
-      // No stored session. If not handling callback/hash, stop loading.
-      if ((!hasCode || !hasState) && !hasHash) {
-        setIsAuthChecking(false);
+      } catch (e) {
+        console.error('Auth Init Error:', e);
+        if (mounted) setIsAuthChecking(false);
       }
-    }
+    };
 
-    // 2. Supabase Auth (Magic Link Redirect Handling)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        try {
-          console.log('Supabase Session Found:', session.user.id);
-          const { data: profile, error } = await getProfile(session.user.id);
-
-          if (profile) {
-            // Existing user
-            console.log('Profile loaded:', profile);
-            const appUser: User = {
-              id: profile.id,
-              nickname: profile.nickname || '名無し',
-              role: profile.role as any || 'resident',
-              avatar: profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.id,
-              score: profile.score || 0,
-              level: profile.level || 1,
-              selectedAreas: profile.selected_areas || ['さいたま市大宮区'],
-              isLineConnected: true
-            };
+    // Helper to load user data
+    const loadUserData = async (userId: string, authUser?: any) => {
+      try {
+        const { data: profile } = await getProfile(userId);
+        if (profile) {
+          const appUser: User = {
+            id: profile.id,
+            nickname: profile.nickname || '名無し',
+            role: profile.role as any || 'resident',
+            avatar: profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.id,
+            score: profile.score || 0,
+            level: profile.level || 1,
+            selectedAreas: profile.selected_areas || ['さいたま市大宮区'],
+            isLineConnected: true
+          };
+          if (mounted) {
             setUser(appUser);
             setSelectedAreas(appUser.selectedAreas);
             localStorage.setItem('saitama_user_id', appUser.id);
-            setIsAuthChecking(false); // Auth complete
+            setIsAuthChecking(false);
             addToast('ログインしました', 'success');
-          } else {
-            // New user (or profile missing) - create from Session Meta
-            console.log('No profile found, creating new...');
-            const meta = session.user.user_metadata;
-            const loginRole = localStorage.getItem('loginRole') || 'resident';
-
-            const newUser: User = {
-              id: session.user.id,
-              nickname: meta.nickname || 'ゲスト',
-              role: loginRole as any, // Restore role
-              avatar: meta.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + session.user.id,
-              level: 1,
-              score: 100,
-              selectedAreas: ['さいたま市大宮区'], // Default if completely new
-              isLineConnected: true
-            };
-            await createProfile(newUser);
+          }
+        } else if (authUser) {
+          // New User Creation logic ...
+          console.log('Creating new user profile...');
+          const meta = authUser.user_metadata;
+          const loginRole = localStorage.getItem('loginRole') || 'resident';
+          const newUser: User = {
+            id: authUser.id,
+            nickname: meta.nickname || 'ゲスト',
+            role: loginRole as any,
+            avatar: meta.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + authUser.id,
+            level: 1,
+            score: 100,
+            selectedAreas: ['さいたま市大宮区'],
+            isLineConnected: true
+          };
+          await createProfile(newUser);
+          if (mounted) {
             setUser(newUser);
             setSelectedAreas(newUser.selectedAreas);
             localStorage.setItem('saitama_user_id', newUser.id);
-            setIsAuthChecking(false); // Auth complete
+            setIsAuthChecking(false);
             addToast('アカウントを作成しました', 'success');
           }
-        } catch (e: any) {
-          console.error('Auth processing error:', e);
-          addToast('認証後のデータ処理に失敗しました', 'error');
-          setIsAuthChecking(false); // Force exit loading state
+        } else {
+          if (mounted) setIsAuthChecking(false);
         }
+      } catch (e) {
+        console.error('Profile Load Error:', e);
+        if (mounted) setIsAuthChecking(false);
+      }
+    };
+
+    initAuth();
+
+    // Listener for Auth State Changes (Sign In, Sign Out)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Only react if user is not yet set (avoid double loading)
+        // But actually, getSession handles initial load. This is for subsequent updates.
+        // We can just call loadUserData again if user is null.
+        loadUserData(session.user.id, session.user);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        localStorage.removeItem('saitama_user_id');
+        setIsAuthChecking(false);
       }
     });
 
-    // 3. Safety Timeout (Final Fallback)
-    // If consuming hash, give more time (10s), else 4s
-    const timeoutDuration = hasHash ? 10000 : 4000;
-
-    const safetyTimer = setTimeout(() => {
-      setIsAuthChecking((prev) => {
-        if (prev) {
-          console.warn('Auth check timed out, forcing UI to render.');
+    // Safety Timeout
+    const timer = setTimeout(() => {
+      if (mounted) {
+        setIsAuthChecking(prev => {
+          if (prev) console.warn('Auth timeout forced');
           return false;
-        }
-        return prev;
-      });
-    }, timeoutDuration);
+        });
+      }
+    }, 6000);
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
-      clearTimeout(safetyTimer);
+      clearTimeout(timer);
     };
   }, []);
 
