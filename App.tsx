@@ -33,7 +33,8 @@ const App: React.FC = () => {
     isLoading: isAuthLoading,
     isAuthChecking: isSupabaseAuthChecking,
     logout,
-    revalidateProfile
+    revalidateProfile,
+    checkSession
   } = useAuth();
 
   // LIFF Auto Auth

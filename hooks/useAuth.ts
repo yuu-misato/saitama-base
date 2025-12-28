@@ -173,6 +173,17 @@ export const useAuth = () => {
         }
     };
 
+    // Externally triggerable session check
+    const checkSession = async () => {
+        setIsAuthChecking(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            await loadUserFromId(session.user.id, true);
+        }
+        setIsAuthChecking(false);
+        setIsLoading(false);
+    };
+
     return {
         user,
         setUser: updateLocalUser, // Safe setter that persists
@@ -181,6 +192,7 @@ export const useAuth = () => {
         logout,
         tempUser,
         setTempUser,
-        revalidateProfile
+        revalidateProfile,
+        checkSession // Exposed
     };
 };
