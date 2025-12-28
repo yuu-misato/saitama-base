@@ -941,5 +941,5 @@ const Dashboard: React.FC = () => {
   );
 };
 
-export default App;
+export default Dashboard;
 
