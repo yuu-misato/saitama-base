@@ -28,6 +28,8 @@ const App: React.FC = () => {
   const {
     user,
     setUser,
+    tempUser,
+    setTempUser,
     isLoading: isAuthLoading,
     isAuthChecking: isSupabaseAuthChecking,
     logout,

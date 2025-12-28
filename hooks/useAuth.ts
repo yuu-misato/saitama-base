@@ -180,6 +180,7 @@ export const useAuth = () => {
         isAuthChecking,
         logout,
         tempUser,
-        setTempUser
+        setTempUser,
+        revalidateProfile
     };
 };
