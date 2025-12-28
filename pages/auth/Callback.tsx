@@ -52,8 +52,8 @@ const Callback = () => {
                 if (data?.error) throw new Error(data.error);
 
                 if (data?.token_hash) {
-                    setStatus('ログインの仕上げをしています...'); // More friendly message
-                    const { error: otpError } = await supabase.auth.verifyOtp({
+                    setStatus('ログインの仕上げをしています...');
+                    const { data: authData, error: otpError } = await supabase.auth.verifyOtp({
                         token_hash: data.token_hash,
                         type: 'magiclink'
                     });
@@ -62,9 +62,14 @@ const Callback = () => {
 
                     logger.log('Session verified, updating auth context...');
                     setStatus('ようこそ！');
-                    await checkSession(); // Force update context
 
-                    // Remove artificial delay for speed
+                    // Pass the session directly to avoid fetch delay/timeouts
+                    if (authData?.session) {
+                        await checkSession(authData.session);
+                    } else {
+                        await checkSession();
+                    }
+
                     navigate('/dashboard', { replace: true });
                 } else if (data?.status === 'new_user') {
                     // This should theoretically not be reached due to auto-registration fallback in backend
@@ -117,13 +122,17 @@ const Callback = () => {
             if (data?.error) throw new Error(data.error);
 
             if (data?.token_hash) {
-                const { error: otpError } = await supabase.auth.verifyOtp({
+                const { data: authData, error: otpError } = await supabase.auth.verifyOtp({
                     token_hash: data.token_hash,
                     type: 'magiclink'
                 });
                 if (otpError) throw otpError;
 
-                await checkSession();
+                if (authData?.session) {
+                    await checkSession(authData.session);
+                } else {
+                    await checkSession();
+                }
                 navigate('/dashboard', { replace: true });
             } else {
                 throw new Error('登録に失敗しました: セッションがありません');

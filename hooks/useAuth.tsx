@@ -15,7 +15,7 @@ interface AuthContextType {
     tempUser: User | null;
     setTempUser: (user: User | null) => void;
     revalidateProfile: () => Promise<void>;
-    checkSession: () => Promise<void>;
+    checkSession: (manualSession?: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -65,16 +65,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { isRestoring: isAutoRestoring } = useAutoSessionRestore(!!session);
 
-    const checkSession = async () => {
+    const checkSession = async (manualSession?: any) => {
         try {
-            // Race against a timeout to prevent infinite loading
-            const timeoutPromise = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Session check timed out')), 5000)
-            );
+            let s = manualSession;
 
-            const sessionPromise = supabase.auth.getSession();
+            if (!s) {
+                // Race against a timeout to prevent infinite loading
+                const timeoutPromise = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Session check timed out')), 5000)
+                );
 
-            const { data: { session: s } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+                const sessionPromise = supabase.auth.getSession();
+
+                const { data } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+                s = data?.session;
+            }
 
             setSession(s);
             if (s) {
@@ -83,7 +88,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (e) {
             console.error('Session check error or timeout:', e);
             // On error/timeout, assume no session to allow UI to render
-            setSession(null);
+            // But if we already have a session, keep it? No, timeout means something wrong.
+            // Only set null if we were genuinely checking.
+            if (!manualSession) setSession(null);
         } finally {
             setIsAuthChecking(false);
             setIsLoading(false);
