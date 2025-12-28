@@ -25,18 +25,28 @@ const Callback = () => {
 
             try {
                 const redirectUri = window.location.origin + '/auth/callback';
-
                 logger.log('Processing callback with code:', code);
 
-                const { data, error: fnError } = await supabase.functions.invoke('line-login', {
-                    body: {
+                // DIRECT DEBUGGING: Use fetch to see raw error
+                const functionUrl = 'https://kykuokxmukjvlytufjtt.supabase.co/functions/v1/line-login';
+
+                const response = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
                         action: 'callback',
                         code,
                         redirect_uri: redirectUri
-                    },
+                    })
                 });
 
-                if (fnError) throw fnError;
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server Error (${response.status}): ${errorText}`);
+                }
+
+                const data = await response.json();
+
                 if (data?.error) throw new Error(data.error);
 
                 if (data?.token_hash) {
@@ -52,11 +62,6 @@ const Callback = () => {
 
                     navigate('/dashboard', { replace: true });
                 } else if (data?.status === 'new_user') {
-                    // New user flow: Auto-register or ask for email
-                    // For now, let's auto-register with a placeholder email if not provided, 
-                    // BUT we need an email for Supabase Auth.
-                    // Let's redirect to a registration state or show a form.
-                    // Since we are in a "Callback", showing a form here is acceptable for a smooth flow.
                     setStatus('new_user');
                     setLineProfile(data.line_profile);
                 } else {
@@ -65,10 +70,6 @@ const Callback = () => {
             } catch (err: any) {
                 logger.error('Login Callback Error:', err);
                 setError(err.message || 'Login failed');
-                // Only redirect on error, not on new_user processing
-                if (status !== 'new_user') {
-                    setTimeout(() => navigate('/', { replace: true }), 3000);
-                }
             }
         };
 
@@ -81,8 +82,13 @@ const Callback = () => {
 
         setStatus('Registering...');
         try {
-            const { data, error } = await supabase.functions.invoke('line-login', {
-                body: {
+            // DIRECT DEBUGGING
+            const functionUrl = 'https://kykuokxmukjvlytufjtt.supabase.co/functions/v1/line-login';
+
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     action: 'register',
                     profile_data: {
                         email,
@@ -92,10 +98,15 @@ const Callback = () => {
                         nickname: lineProfile.display_name, // Use display name as nickname
                         area: '未設定' // Default area
                     }
-                }
+                })
             });
 
-            if (error) throw error;
+            if (!response.ok) {
+                const txt = await response.text();
+                throw new Error(`Register Failed: ${txt}`);
+            }
+            const data = await response.json();
+
             if (data?.error) throw new Error(data.error);
 
             if (data?.token_hash) {
@@ -156,8 +167,23 @@ const Callback = () => {
         return (
             <div className="min-h-screen flex items-center justify-center bg-red-50 flex-col p-4 text-center">
                 <div className="text-red-500 font-bold mb-2">Login Failed</div>
-                <div className="text-sm text-slate-600 mb-4">{error}</div>
-                <p className="text-xs text-slate-400">Redirecting to home...</p>
+                <div className="text-sm text-slate-600 mb-4 bg-white p-4 rounded shadow border border-red-100 max-w-lg break-all">
+                    {error}
+                </div>
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition shadow-sm"
+                    >
+                        Retry
+                    </button>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="px-4 py-2 bg-white text-slate-600 border border-slate-300 rounded hover:bg-slate-50 transition shadow-sm"
+                    >
+                        Back to Home
+                    </button>
+                </div>
             </div>
         );
     }
