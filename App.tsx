@@ -8,7 +8,7 @@ import CommunityPanel from './components/CommunityPanel';
 import BusinessPanel from './components/BusinessPanel';
 import LandingPage from './components/LandingPage';
 import { useAuth } from './hooks/useAuth';
-import { useLiffAutoAuth } from './hooks/useLiffAutoAuth';
+
 import { User, Post, PostCategory, Coupon, Kairanban, VolunteerMission, Community } from './types';
 import { SAITAMA_MUNICIPALITIES, MUNICIPALITY_COORDINATES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
 import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons, getMissions, createMission, joinMission, addComment, toggleLike } from './services/supabaseService';
