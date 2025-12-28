@@ -1075,10 +1075,12 @@ const App: React.FC = () => {
                     addToast('位置情報がサポートされていません', 'error');
                     return;
                   }
-                  navigator.geolocation.getCurrentPosition(pos => {
+                  addToast('位置情報を取得中...', 'info');
+                  navigator.geolocation.getCurrentPosition(async (pos) => {
                     const { latitude, longitude } = pos.coords;
                     let nearest = '';
                     let minDistance = Infinity;
+
                     Object.entries(MUNICIPALITY_COORDINATES).forEach(([name, coords]) => {
                       const dist = Math.sqrt(Math.pow(coords.lat - latitude, 2) + Math.pow(coords.lon - longitude, 2));
                       if (dist < minDistance) {
@@ -1086,13 +1088,35 @@ const App: React.FC = () => {
                         nearest = name;
                       }
                     });
-                    if (nearest && !selectedAreas.includes(nearest)) {
-                      setSelectedAreas([...selectedAreas, nearest]);
-                      addToast(`${nearest}を追加しました`, 'success');
-                    } else if (nearest) {
-                      addToast(`${nearest}は既に追加されています`, 'info');
+
+                    if (nearest) {
+                      if (!selectedAreas.includes(nearest)) {
+                        const newAreas = [...selectedAreas, nearest];
+                        setSelectedAreas(newAreas);
+
+                        // Sync with Database immediately
+                        if (user) {
+                          const updatedUser = { ...user, selectedAreas: newAreas };
+                          // Use createsProfile which is actually an UPSERT
+                          const { error } = await createProfile(updatedUser);
+                          if (!error) {
+                            setUser(updatedUser);
+                            addToast(`${nearest}をマイエリアに追加しました`, 'success');
+                          } else {
+                            console.error('Location Save Error:', error);
+                            addToast(`${nearest}を追加しましたが、保存に失敗しました`, 'error');
+                          }
+                        } else {
+                          addToast(`${nearest}を追加しました（ログイン後に保存されます）`, 'success');
+                        }
+                      } else {
+                        addToast(`${nearest}は既にマイエリアです`, 'info');
+                      }
                     }
-                  }, () => addToast('位置情報の取得に失敗しました', 'error'));
+                  }, (err) => {
+                    console.error(err);
+                    addToast('位置情報の取得に失敗しました: ' + err.message, 'error');
+                  }, { enableHighAccuracy: true, timeout: 10000 });
                 }}
                 className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-slate-700"
               >
