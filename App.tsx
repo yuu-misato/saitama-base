@@ -21,9 +21,11 @@ import Toast, { ToastMessage } from './components/Toast';
 import RegistrationModal from './components/RegistrationModal';
 
 const App: React.FC = () => {
-  const { user, setUser, tempUser, setTempUser, isLoading, isAuthChecking, logout } = useAuth();
+  // isLoading from hook is renamed to avoid conflict with content loading state
+  const { user, setUser, tempUser, setTempUser, isLoading: isAuthLoading, isAuthChecking, logout } = useAuth();
 
   const [activeTab, setActiveTab] = useState('feed');
+  const [isLoading, setIsLoading] = useState(false); // Content loading state
   const [posts, setPosts] = useState<Post[]>([]);
   const [kairanbans, setKairanbans] = useState<Kairanban[]>([]);
   const [missions, setMissions] = useState<VolunteerMission[]>([]);
