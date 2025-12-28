@@ -952,13 +952,13 @@ const App: React.FC = () => {
               ))}
             </div>
 
-            {/* Add/Edit Area Button (Using Modal) */}
+            {/* Add Area Button (Using New AreaSelectModal) */}
             <button
-              onClick={() => setIsEditingProfile(true)}
+              onClick={() => setIsAreaModalOpen(true)}
               className="w-full bg-slate-50 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-emerald-200 hover:bg-emerald-50 transition-all text-slate-500 hover:text-emerald-600 font-bold flex items-center justify-center gap-2 mb-6"
             >
-              <i className="fas fa-map-marker-alt"></i>
-              エリアを追加・変更する
+              <i className="fas fa-plus-circle"></i>
+              新しいエリアを追加
             </button>
 
             <div className="bg-emerald-50 rounded-xl p-4 mb-8 flex items-center justify-between">
