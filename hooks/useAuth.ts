@@ -21,8 +21,9 @@ export const useAuth = () => {
 
     // Initial Auth Check
     useEffect(() => {
+        let mounted = true;
+
         const initAuth = async () => {
-            let mounted = true;
             setIsAuthChecking(true);
 
             // 1. Check for URL Hash (OAuth Redirect)
@@ -30,22 +31,22 @@ export const useAuth = () => {
             const params = new URLSearchParams(window.location.search);
             const hasCode = params.has('code');
 
-            if (hash && hash.includes('access_token')) {
-                console.log('Detected generic OAuth hash, waiting for Supabase...');
-                // Allow Supabase client to handle the session exchange
-                const { data: { session }, error } = await supabase.auth.getSession();
-                if (session && mounted) {
-                    // Check if profile exists
-                    const userId = session.user.id;
-                    await loadUserFromId(userId, mounted);
-                    setIsAuthChecking(false);
-                    return;
-                }
+            // If Code exists, we expect a session exchange or redirect loop.
+            // Do NOT finalize auth checking to prevent fallback to LandingPage.
+            if (hasCode) {
+                console.log('Auth Code detected, waiting for exchange...');
+                return;
             }
 
-            if (hasCode) {
-                console.log('Detected Authoriation Code, waiting...');
-                // Usually handled by Supabase automatically, but we wait just in case
+            if (hash && hash.includes('access_token')) {
+                console.log('Detected generic OAuth hash, waiting for Supabase...');
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session && mounted) {
+                    await loadUserFromId(session.user.id, mounted);
+                    setIsAuthChecking(false);
+                    setIsLoading(false);
+                    return;
+                }
             }
 
             // 2. Load from LocalStorage (Persistence Strategy)
@@ -62,7 +63,6 @@ export const useAuth = () => {
                             setIsAuthChecking(false);
                             // SWR: Revalidate in background
                             revalidateProfile(storedUserId);
-                            return;
                         }
                     } catch (e) {
                         console.error('Profile parse error', e);
@@ -80,6 +80,29 @@ export const useAuth = () => {
         };
 
         initAuth();
+
+        // 3. Listen for Auth State Changes (Critical for OAuth / Session Recovery)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (!mounted) return;
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                if (session?.user) {
+                    // Only load if we don't have a user or ID mismatch
+                    // But re-fetching is safer
+                    await loadUserFromId(session.user.id, mounted);
+                    setIsAuthChecking(false);
+                    setIsLoading(false);
+                }
+            } else if (event === 'SIGNED_OUT') {
+                setUser(null);
+                setIsAuthChecking(false);
+                setIsLoading(false);
+            }
+        });
+
+        return () => {
+            mounted = false;
+            subscription.unsubscribe();
+        };
     }, []);
 
     // Helper: Load User by ID
