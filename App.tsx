@@ -248,6 +248,7 @@ const App: React.FC = () => {
     await createProfile(demoUser);
 
     setUser(demoUser);
+    setSelectedAreas(demoUser.selectedAreas); // Update global state for filtering
     localStorage.setItem('saitama_user_id', dummyUserId); // 永続化
     addToast('デモログインしました（認証スキップ）', 'success');
   };
