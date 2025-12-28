@@ -150,16 +150,14 @@ serve(async (req) => {
         }
 
         // 6. Register
+        // 6. Register
         if (action === 'register') {
             const { email, line_user_id, display_name, picture_url, nickname } = profile_data;
             const randomPassword = crypto.randomUUID();
 
-            // Check if email exists
-            const { data: existingUser } = await supabase.from('line_accounts').select('*').eq('line_user_id', line_user_id).maybeSingle();
-            if (existingUser) {
-                throw new Error('User already registered');
-            }
+            let userId;
 
+            // Try to create user first
             const { data: authData, error: authError } = await supabase.auth.admin.createUser({
                 email,
                 password: randomPassword,
@@ -167,16 +165,53 @@ serve(async (req) => {
                 user_metadata: { nickname, avatar_url: picture_url }
             });
 
-            if (authError) throw authError;
+            if (authError) {
+                // Check both English and potential localized error message or code
+                if (authError.message?.includes('already been registered') || authError.status === 422 || authError.code === 'email_exists') {
+                    // User exists, allow linking
+                    console.log("User email exists, attempting linkage for:", email);
 
-            await supabase.from('line_accounts').insert({
-                user_id: authData.user.id,
+                    // Get existing user via generateLink (safe way to get ID by email in admin context)
+                    const { data: userLinkData, error: linkError } = await supabase.auth.admin.generateLink({
+                        type: 'magiclink',
+                        email
+                    });
+
+                    if (linkError || !userLinkData.user) {
+                        console.error("Link retrieval failed:", linkError);
+                        throw new Error("Could not verify existing user for linking.");
+                    }
+                    userId = userLinkData.user.id;
+
+                    // Check if this specific LINE account is already linked to ANOTHER user to prevent abuse?
+                    // line_user_id check:
+                    const { data: existingLineParams } = await supabase.from('line_accounts').select('user_id').eq('line_user_id', line_user_id).maybeSingle();
+                    if (existingLineParams && existingLineParams.user_id !== userId) {
+                        throw new Error('This LINE account is already linked to another user.');
+                    }
+                } else {
+                    throw authError; // Real error
+                }
+            } else {
+                userId = authData.user.id;
+            }
+
+            // Link LINE account (Upsert to be safe)
+            const { error: upsertError } = await supabase.from('line_accounts').upsert({
+                user_id: userId,
                 line_user_id,
                 display_name,
                 picture_url,
-                is_notification_enabled: true
-            });
+                is_notification_enabled: true,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id, line_user_id' }); // Actually PK is composite, so upsert works
 
+            if (upsertError) {
+                console.error("Line Account Upsert Error:", upsertError);
+                throw new Error("Failed to link LINE account.");
+            }
+
+            // Generate session link for login
             const { data: link } = await supabase.auth.admin.generateLink({
                 type: 'magiclink',
                 email
