@@ -7,7 +7,8 @@ import ChokaiPanel from './components/ChokaiPanel';
 import CommunityPanel from './components/CommunityPanel';
 import BusinessPanel from './components/BusinessPanel';
 import LandingPage from './components/LandingPage';
-import { Post, PostCategory, Coupon, Kairanban, VolunteerMission, User, Community } from './types';
+import { useAuth } from './hooks/useAuth';
+import { User, Post, PostCategory, Coupon, Kairanban, VolunteerMission, Community } from './types';
 import { SAITAMA_MUNICIPALITIES, MUNICIPALITY_COORDINATES, MOCK_KAIRANBAN, MOCK_MISSIONS, MOCK_COUPONS, INITIAL_POSTS } from './constants';
 import { supabase, getPosts, createPost, createKairanbanWithNotification, registerLocalCoupon, createProfile, createCommunity, joinCommunity, getProfile, getKairanbans, getCoupons, getMissions, createMission, joinMission, addComment, toggleLike } from './services/supabaseService';
 
@@ -20,11 +21,9 @@ import Toast, { ToastMessage } from './components/Toast';
 import RegistrationModal from './components/RegistrationModal';
 
 const App: React.FC = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [tempUser, setTempUser] = useState<User | null>(null); // 新規登録用一時ステート
+  const { user, setUser, tempUser, setTempUser, isLoading, isAuthChecking, logout } = useAuth();
+
   const [activeTab, setActiveTab] = useState('feed');
-  const [isLoading, setIsLoading] = useState(true); // Loading state
-  const [isAuthChecking, setIsAuthChecking] = useState(true); // Auth check state
   const [posts, setPosts] = useState<Post[]>([]);
   const [kairanbans, setKairanbans] = useState<Kairanban[]>([]);
   const [missions, setMissions] = useState<VolunteerMission[]>([]);
