@@ -134,6 +134,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, scor
               <i className="fas fa-coins text-amber-500 text-xs"></i>
               <span className="text-xs font-bold text-slate-700">{score}</span>
             </div>
+            <button
+              onClick={() => setActiveTab('profile')}
+              className="md:hidden w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
+            >
+              <i className="fas fa-cog"></i>
+            </button>
           </div>
         </header>
         <div className="max-w-4xl mx-auto p-4 md:p-8">

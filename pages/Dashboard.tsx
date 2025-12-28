@@ -7,6 +7,7 @@ import ChokaiPanel from '../components/ChokaiPanel';
 import CommunityPanel from '../components/CommunityPanel';
 import BusinessPanel from '../components/BusinessPanel';
 import LandingPage from '../components/LandingPage';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 /* Auth logic handled by App.tsx router */
 
@@ -50,7 +51,7 @@ const Dashboard: React.FC = () => {
   const [selectedAreas, setSelectedAreas] = useState<string[]>(['さいたま市大宮区']);
   const [isPosting, setIsPosting] = useState(false);
   const [isCreatingMission, setIsCreatingMission] = useState(false); // New state
-  const [newPost, setNewPost] = useState({ title: '', content: '', category: 'notice' as PostCategory, area: '' });
+  const [newPost, setNewPost] = useState({ title: '', content: '', category: 'notice' as PostCategory, area: '', imageUrl: '' });
   const [newMission, setNewMission] = useState({ title: '', description: '', points: 50, area: '', date: '', maxParticipants: 5 }); // New state
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   // State for popups
@@ -114,7 +115,7 @@ const Dashboard: React.FC = () => {
           sentToLine: k.sent_to_line || false,
           createdAt: k.created_at,
           category: 'notice',
-          communityId: k.community_id
+          communityId: k.communityId || k.community_id // Handle both cases for safety
         }));
         setKairanbans(mappedKairan);
       }
@@ -372,7 +373,7 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (!user) return null; // Should redirect via Effect or Router if needed, but App.tsx handles "/" route for non-auth users.
+  if (!user) return <Navigate to="/" replace />;
   // Actually, Dashboard is protected? No, App.tsx has no protection yet. 
   // Let's add a redirect effect here just in case.
 
@@ -490,7 +491,7 @@ const Dashboard: React.FC = () => {
                     };
                     setKairanbans([kairan as any, ...kairanbans]);
                     setIsPosting(false);
-                    setNewPost({ title: '', content: '', category: 'notice', area: '' });
+                    setNewPost({ title: '', content: '', category: 'notice', area: '', imageUrl: '' });
                     addToast(`${selectedCommunity.membersCount}人のLINEに配信しました！`, 'success');
                   }} className="space-y-4">
                     {/* ... form content ... */}
@@ -891,6 +892,33 @@ const Dashboard: React.FC = () => {
               >
                 友だち追加
               </a>
+            </div>
+
+            {/* Notification Settings */}
+            <div className="border-t border-slate-100 pt-8 mb-8">
+              <h3 className="text-xl font-black text-slate-800 mb-6">通知設定</h3>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">新着情報の通知</p>
+                    <p className="text-xs text-slate-400">マイエリアの投稿通知をLINEで受け取る</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked onChange={() => addToast('通知設定を更新しました', 'success')} />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#06C755]"></div>
+                  </label>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">重要なお知らせ</p>
+                    <p className="text-xs text-slate-400">自治体からの防災・防犯情報</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" defaultChecked disabled />
+                    <div className="w-11 h-6 bg-[#06C755]/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#06C755] cursor-not-allowed"></div>
+                  </label>
+                </div>
+              </div>
             </div>
 
             <div className="pt-8 border-t border-slate-100">
