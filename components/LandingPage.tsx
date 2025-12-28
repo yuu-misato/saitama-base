@@ -40,16 +40,63 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
         }
         setIsLocating(true);
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                // Mock implementation for demo - usually requires Reverse Geocoding API
-                // Here we just set a default for demo if geolocation works
-                // 本来は Google Maps API 等で座標から住所を取得します
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    // Use OpenStreetMap Nominatim API for Reverse Geocoding
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`);
+                    const data = await response.json();
 
-                // For demo purpose, pick a random city in the selected prefecture or near Tokyo
-                setMunicipality('大宮区'); // Demo fallback
-                setSelectedPrefecture('埼玉県');
+                    if (data && data.address) {
+                        const addr = data.address;
+                        // Extract Prefecture
+                        const pref = addr.province || addr.state; // Nominatim varies
+                        if (pref) setSelectedPrefecture(pref);
 
-                setIsLocating(false);
+                        // Extract Municipality (City, Ward, Town, Village)
+                        // Prioritize: City > Ward > Town > Village
+                        // Note: In Tokyo special wards, "city" might be missing, "ward" is key.
+                        // In Saitama-shi, "city" is Saitama, "ward" is Omiya-ku. We want "Omiya-ku" if available, or just "Saitama-shi Omiya-ku"?
+                        // The app expects "municipality" input. Currently separate from prefecture.
+
+                        let muni = '';
+                        if (addr.ward) {
+                            // If it's a ward (e.g. Omiya-ku), we might want to include the city name if it's a designated city?
+                            // But usually users write "Saitama-shi Omiya-ku" or just "Omiya-ku".
+                            // Let's rely on what user likely expects.
+                            // For Saitama city, addr.city is "Saitama", addr.ward is "Omiya-ku".
+                            // If we just put "Omiya-ku", combined it becomes "Saitama-ken Omiya-ku". 
+                            // Wait, usually it's "Saitama-ken Saitama-shi Omiya-ku".
+                            // Let's compose it carefully.
+                            if (addr.city) {
+                                muni = addr.city + addr.ward;
+                            } else {
+                                muni = addr.ward;
+                            }
+                        } else if (addr.city) {
+                            muni = addr.city;
+                        } else if (addr.town) {
+                            muni = addr.town;
+                        } else if (addr.village) {
+                            muni = addr.village;
+                        }
+
+                        // Clean up
+                        if (muni) {
+                            setMunicipality(muni);
+                            // If prefecture matches, good.
+                        } else {
+                            alert('市区町村が特定できませんでした。手入力をお願いします。');
+                        }
+                    } else {
+                        alert('住所が取得できませんでした');
+                    }
+                } catch (error) {
+                    console.error('Geocoding error:', error);
+                    alert('住所情報の取得に失敗しました');
+                } finally {
+                    setIsLocating(false);
+                }
             },
             (error) => {
                 console.error(error);
@@ -99,7 +146,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                                         </div>
                                     </div>
 
-                                    {/* Municipality Input */}
+                                    {/* Municipality Input & GPS Button */}
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
@@ -108,15 +155,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                                             onChange={(e) => setMunicipality(e.target.value)}
                                             className="flex-1 bg-emerald-50 border border-emerald-100 px-5 py-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-emerald-500/20 text-emerald-800"
                                         />
-                                        <button
-                                            onClick={handleFindLocation}
-                                            disabled={isLocating}
-                                            className="bg-slate-900 text-white rounded-xl w-14 flex items-center justify-center shadow-lg hover:bg-slate-800 active:scale-95 transition-all"
-                                            title="現在地から入力"
-                                        >
-                                            {isLocating ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-location-arrow"></i>}
-                                        </button>
                                     </div>
+                                    <button
+                                        onClick={handleFindLocation}
+                                        disabled={isLocating}
+                                        className="w-full bg-slate-900 text-white rounded-xl py-3 flex items-center justify-center gap-2 shadow-lg hover:bg-slate-800 active:scale-95 transition-all text-sm font-bold"
+                                    >
+                                        {isLocating ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-location-arrow"></i>}
+                                        現在地から入力する
+                                    </button>
                                 </div>
                             </div>
 
