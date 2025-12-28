@@ -20,6 +20,7 @@ import EmptyState from './components/EmptyState';
 import Toast, { ToastMessage } from './components/Toast';
 import RegistrationModal from './components/RegistrationModal';
 import AIChat from './components/AIChat';
+import AreaSelectModal from './components/AreaSelectModal';
 
 const App: React.FC = () => {
   // isLoading from hook is renamed to avoid conflict with content loading state
@@ -42,6 +43,7 @@ const App: React.FC = () => {
   const [isBroadcasting, setIsBroadcasting] = useState(false);
   // State for popups
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
   const [showScorePopup, setShowScorePopup] = useState<{ show: boolean, amount: number }>({ show: false, amount: 0 });
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -279,6 +281,22 @@ const App: React.FC = () => {
       // Update local storage for persistence
       localStorage.setItem('saitama_user_nickname', nickname);
       localStorage.setItem('saitama_user_profile', JSON.stringify(updatedUser));
+    }
+  };
+
+  const handleAreaAdd = async (newArea: string) => {
+    if (newArea && !selectedAreas.includes(newArea)) {
+      const newAreas = [...selectedAreas, newArea];
+      setSelectedAreas(newAreas);
+
+      if (user) {
+        const updatedUser = { ...user, selectedAreas: newAreas };
+        await createProfile(updatedUser);
+        setUser(updatedUser);
+        addToast(`${newArea}を追加しました`, 'success');
+      }
+    } else {
+      addToast('そのエリアは既に追加されています', 'info');
     }
   };
 
@@ -1020,12 +1038,14 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-      <Toast toasts={toasts} onRemove={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
+      <Toast toasts={toasts} onRemove={(id) => setToasts(prev => prev.id !== id))} />
 
       {renderContent()}
       <DebugPanel />
+      <AreaSelectModal isOpen={isAreaModalOpen} onClose={() => setIsAreaModalOpen(false)} onAdd={handleAreaAdd} />
     </Layout>
   );
 };
 
 export default App;
+```
