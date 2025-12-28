@@ -214,59 +214,42 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // LINEログイン (Supabase Auth)
+  // LINEログイン (簡易スキップモード - User Request)
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     localStorage.setItem('loginRole', role);
 
-    // 1. まず標準のLINEプロバイダーを試行
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'line',
-      options: {
-        redirectTo: window.location.origin,
-        scopes: 'profile openid',
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consents'
-        }
-      }
-    });
+    // 認証プロセスをすべてスキップし、即座にログイン完了とみなす
+    // 本番環境では削除・修正が必要
+    console.log('Skipping LINE Auth for demo purposes...');
 
-    if (error) {
-      console.warn('Native LINE login failed:', error);
+    // ダミーのユーザーセッションを作成（または単純に状態更新）
+    const dummyUserId = 'demo-user-' + Math.random().toString(36).substring(7);
 
-      // LINEプロバイダーが見つからない場合、自動的にOIDC接続を試みる（フォールバック）
-      // ユーザーが「LINEが一覧にないからOpenID Connectで設定した」ケースに対応
-      if (error.message.includes('Provider line could not be found')) {
-        console.log('Falling back to OIDC provider for LINE...');
-        const { error: oidcError } = await supabase.auth.signInWithOAuth({
-          provider: 'oidc',
-          options: {
-            redirectTo: window.location.origin,
-            scopes: 'openid profile',
-            queryParams: {
-              prompt: 'consents',
-              // issuer などのパラメータはSupabase側で固定設定されている前提
-            }
-          }
-        });
+    // ユーザー状態を更新（Appコンポーネントのstateを更新）
+    // handleLineLoginはAppコンポーネント内にあるため、setUserを直接呼べますが、
+    // ここでは単純にsupabaseのonAuthStateChangeを発火させるか、または手動でsetUserを行います。
+    // AuthStateChangeはSupabase側からの発火なので、手動でsetUserします。
 
-        if (oidcError) {
-          console.error('OIDC Fallback failed:', oidcError);
-          // 両方ダメだった場合
-          alert(
-            '【重要：ログイン設定が必要です】\n\n' +
-            'Supabase側でLINEログインが有効になっていません。\n' +
-            '前回ログインできた設定に戻すには、以下のいずれかを行ってください：\n\n' +
-            'A. Supabase > Auth > Providers で「LINE」を追加して有効化する。\n' +
-            '   ※一覧にない場合は「Add Provider」メニューから探してください。\n\n' +
-            'B. または「OpenID Connect」を有効化し、Issuerに「https://access.line.me」を設定する。\n\n' +
-            'この設定を行わないとログインできません。'
-          );
-        }
-      } else {
-        addToast('ログインエラー: ' + error.message, 'error');
-      }
-    }
+    const pendingRegistrationStr = localStorage.getItem('pendingRegistration');
+    const pendingRegistration = pendingRegistrationStr ? JSON.parse(pendingRegistrationStr) : null;
+
+    const demoUser: User = {
+      id: dummyUserId,
+      nickname: pendingRegistration?.nickname || 'ゲストユーザー',
+      role: role,
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=guest',
+      level: 1,
+      score: 100,
+      selectedAreas: pendingRegistration?.areas || ['さいたま市大宮区'],
+      isLineConnected: true
+    };
+
+    // DBへの保存も試みる（失敗しても進む）
+    await createProfile(demoUser);
+
+    setUser(demoUser);
+    localStorage.setItem('saitama_user_id', dummyUserId); // 永続化
+    addToast('デモログインしました（認証スキップ）', 'success');
   };
 
   // Auth State Monitoring & Profile Sync
