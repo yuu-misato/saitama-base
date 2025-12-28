@@ -433,6 +433,14 @@ const App: React.FC = () => {
           }
         } catch (err: any) {
           console.error('LINE Login Error:', err);
+
+          // ★ Fix: If we already recovered a user ID (e.g. via parallel initAuth), DO NOT fall back to guest.
+          if (localStorage.getItem('saitama_user_id')) {
+            console.log('User ID exists in storage, suppressing guest fallback.');
+            setIsAuthChecking(false);
+            return;
+          }
+
           // FALLBACK: If Server Auth fails, force login as Guest to unblock user
           addToast('認証サーバー応答なし。ゲストモードでログインします', 'info');
 
