@@ -158,7 +158,21 @@ const App: React.FC = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // 3. Safety Timeout (Final Fallback)
+    const safetyTimer = setTimeout(() => {
+      setIsAuthChecking((prev) => {
+        if (prev) {
+          console.warn('Auth check timed out, forcing UI to render.');
+          return false;
+        }
+        return prev;
+      });
+    }, 4000); // 4秒で強制解除
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimer);
+    };
   }, []);
 
   // 実データのフェッチ（全ての共通データ）
@@ -317,6 +331,7 @@ const App: React.FC = () => {
         } catch (err: any) {
           console.error('LINE Login Error:', err);
           addToast('ログイン失敗: ' + (err.message || 'Unknown error'), 'error');
+          setIsAuthChecking(false); // Force UI render on error
           // 失敗時はデモモードにフォールバックさせますか？今回はエラー表示のみ。
         } finally {
           // URLを綺麗にする
