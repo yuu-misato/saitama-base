@@ -82,8 +82,7 @@ const App: React.FC = () => {
           window.location.hash.includes('error_description')
         );
         const hasCode = params.get('code');
-        const hasCode = params.get('code'); // Kept for potential future use or context
-        const hasState = params.get('state'); // Kept for potential future use or context
+        const hasState = params.get('state');
 
         if (session?.user) {
           console.log('Active Supabase Session found:', session.user.id);
