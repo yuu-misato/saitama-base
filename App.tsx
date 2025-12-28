@@ -76,15 +76,20 @@ const App: React.FC = () => {
         // 1. Supabase Session Check (Handles Magic Link Hash automatically)
         const { data: { session }, error } = await supabase.auth.getSession();
 
+        // Detect Redirects (LINE code or Magic Link Hash)
+        const hasHash = window.location.hash && (
+          window.location.hash.includes('access_token') ||
+          window.location.hash.includes('error_description')
+        );
+        const hasCode = params.get('code');
+        const hasState = params.get('state');
+
         if (session?.user) {
           console.log('Active Supabase Session found:', session.user.id);
           await loadUserData(session.user.id, session.user);
         } else {
           // 2. No active session, check Local Storage (Legacy/Manual persistence)
           const storedUserId = localStorage.getItem('saitama_user_id');
-          // Check if we are in a text-flow (LINE login callback)
-          const hasCode = params.get('code');
-          const hasState = params.get('state');
 
           if (storedUserId) {
             console.log('Restoring from LocalStorage:', storedUserId);
@@ -107,15 +112,21 @@ const App: React.FC = () => {
               }
             } else {
               localStorage.removeItem('saitama_user_id');
-              // No valid stored user. If not Line callback, stop loading.
-              if (!hasCode || !hasState) {
+              // No valid stored user.
+              // STOP LOADING ONLY IF NO AUTH REDIRECTS IN PROGRESS
+              if ((!hasCode || !hasState) && !hasHash) {
                 if (mounted) setIsAuthChecking(false);
+              } else {
+                console.log('Deferred loading stop due to detected Auth Redirect Params');
               }
             }
           } else {
-            // No stored session. If not handling callback, stop loading.
-            if (!hasCode || !hasState) {
+            // No stored session.
+            // STOP LOADING ONLY IF NO AUTH REDIRECTS IN PROGRESS
+            if ((!hasCode || !hasState) && !hasHash) {
               if (mounted) setIsAuthChecking(false);
+            } else {
+              console.log('Deferred loading stop due to detected Auth Redirect Params');
             }
           }
         }
