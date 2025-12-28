@@ -280,6 +280,11 @@ const App: React.FC = () => {
 
     // LINEログイン コールバック処理
     if (code && state) {
+      if (user) {
+        // Already logged in (restored), just clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+        return;
+      }
       const handleLineCallback = async () => {
         // State検証 (簡易)
         const savedState = localStorage.getItem('line_auth_state');
@@ -304,6 +309,8 @@ const App: React.FC = () => {
           if (data?.redirectUrl) {
             console.log('Login successful, redirecting to session...');
             window.location.href = data.redirectUrl; // ログイン完了URLへジャンプ
+            // Note: Page will reload, so no need to set isAuthChecking(false) here usually,
+            // but if it stalls, the next load handles it.
           } else {
             throw new Error(data?.error || 'No redirect URL returned');
           }
