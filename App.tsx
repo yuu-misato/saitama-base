@@ -70,7 +70,7 @@ const App: React.FC = () => {
 
     // 1. まずローカルストレージを確認 (優先)
     const storedUserId = localStorage.getItem('saitama_user_id');
-    const params = new URLSearchParams(window.location.search);
+    // params is already declared above
     const hasCode = params.get('code');
     const hasState = params.get('state');
 
