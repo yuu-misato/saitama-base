@@ -125,11 +125,14 @@ const App: React.FC = () => {
       }
     };
 
-    // Helper to load user data
+    // Helper to load user data (Robust Fallback)
     const loadUserData = async (userId: string, authUser?: any) => {
       try {
+        // 1. Try to get existing profile
         const { data: profile } = await getProfile(userId);
+
         if (profile) {
+          // Success: Existing User
           const appUser: User = {
             id: profile.id,
             nickname: profile.nickname || '名無し',
@@ -145,14 +148,19 @@ const App: React.FC = () => {
             setSelectedAreas(appUser.selectedAreas);
             localStorage.setItem('saitama_user_id', appUser.id);
             setIsAuthChecking(false);
-            addToast('ログインしました', 'success');
+            // addToast('ログインしました', 'success');
           }
-        } else if (authUser) {
-          // New User Creation logic ...
-          console.log('Creating new user profile...');
+          return;
+        }
+
+        // 2. Profile not found or error, but we have authUser (Auth Session exists)
+        if (authUser) {
+          console.log('Profile missing. Attempting upsert/fallback...');
           const meta = authUser.user_metadata;
           const loginRole = localStorage.getItem('loginRole') || 'resident';
-          const newUser: User = {
+
+          // Construct Fallback User from Auth Data
+          const fallbackUser: User = {
             id: authUser.id,
             nickname: meta.nickname || 'ゲスト',
             role: loginRole as any,
@@ -162,20 +170,49 @@ const App: React.FC = () => {
             selectedAreas: ['さいたま市大宮区'],
             isLineConnected: true
           };
-          await createProfile(newUser);
-          if (mounted) {
-            setUser(newUser);
-            setSelectedAreas(newUser.selectedAreas);
-            localStorage.setItem('saitama_user_id', newUser.id);
-            setIsAuthChecking(false);
-            addToast('アカウントを作成しました', 'success');
+
+          // Try to save to DB (Upsert) - Retry logic on DB
+          const { error: createError } = await createProfile(fallbackUser);
+          if (createError) {
+            console.warn('Failed to Create/Upsert Profile, using in-memory fallback:', createError);
+            addToast('プロフィールの保存に失敗しましたが、一時的にログインします', 'info');
+          } else {
+            addToast('アカウントを同期しました', 'success');
           }
+
+          // Force Login with Fallback User regardless of DB success
+          if (mounted) {
+            setUser(fallbackUser);
+            setSelectedAreas(fallbackUser.selectedAreas);
+            localStorage.setItem('saitama_user_id', fallbackUser.id);
+            setIsAuthChecking(false);
+          }
+        } else {
+          // No profile and NO authUser -> Really failed
+          console.error('Failed to load user: No profile and no session user.');
+          if (mounted) setIsAuthChecking(false);
+        }
+
+      } catch (e) {
+        console.error('Critical Profile Load Error:', e);
+        // Emergency Fallback if authUser is available
+        if (authUser && mounted) {
+          const emergencyUser: User = {
+            id: authUser.id,
+            nickname: '復旧ユーザー',
+            role: 'resident',
+            avatar: '',
+            level: 1,
+            score: 0,
+            selectedAreas: ['さいたま市大宮区'],
+            isLineConnected: true
+          };
+          setUser(emergencyUser);
+          setIsAuthChecking(false);
+          addToast('簡易モードでログインしました', 'info');
         } else {
           if (mounted) setIsAuthChecking(false);
         }
-      } catch (e) {
-        console.error('Profile Load Error:', e);
-        if (mounted) setIsAuthChecking(false);
       }
     };
 
