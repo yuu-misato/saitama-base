@@ -88,9 +88,14 @@ const App: React.FC = () => {
           console.log('Active Supabase Session found:', session.user.id);
           await loadUserData(session.user.id, session.user);
         } else {
-          // ★ CRITICAL FIX: Hash detected but Session NULL -> Force Entry
-          if (hasHash) {
-            console.warn('Auth Hash detected but Session is null. Forcing Recovery Login.');
+          // ★ CRITICAL FIX: Hash detected OR Auth Marker found -> Force Entry
+          const isAuthInProgress = localStorage.getItem('auth_in_progress') === 'true';
+
+          if (hasHash || isAuthInProgress) {
+            console.warn('Auth Hash or Marker detected. Forcing Recovery Login.');
+            // Clear marker only if we successfully enter? Yes.
+            localStorage.removeItem('auth_in_progress');
+
             const pendingRegStr = localStorage.getItem('pendingRegistration');
             const pendingReg = pendingRegStr ? JSON.parse(pendingRegStr) : null;
 
@@ -478,6 +483,7 @@ const App: React.FC = () => {
   // LINEログイン (Edge Function経由 - Custom Auth Flow)
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     localStorage.setItem('loginRole', role);
+    localStorage.setItem('auth_in_progress', 'true'); // Mark auth start
 
     // LINE Login Channel ID
     const clientId = '2008784970';
