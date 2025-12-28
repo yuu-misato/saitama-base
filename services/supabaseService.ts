@@ -106,10 +106,23 @@ export const getPosts = async (areas: string[]) => {
  * タイムライン投稿の作成
  */
 export const createPost = async (post: any) => {
+  // Map frontend camelCase to DB snake_case
+  const dbPayload = {
+    content: post.content,
+    area: post.area,
+    category: post.category,
+    image_url: post.imageUrl || post.image || null,
+    author_id: post.authorId,
+    likes: 0,
+    created_at: new Date().toISOString()
+  };
+
   const { data, error } = await supabase
     .from('posts')
-    .insert(post)
+    .insert(dbPayload)
     .select();
+
+  if (error) console.error('Create Post Error:', error);
   return { data, error };
 };
 
