@@ -30,7 +30,7 @@ const Callback = () => {
                     body: {
                         action: 'callback',
                         code,
-                        redirectUri
+                        redirect_uri: redirectUri
                     },
                 });
 

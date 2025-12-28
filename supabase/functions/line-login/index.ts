@@ -11,26 +11,38 @@ const LINE_LOGIN_CHANNEL_SECRET = Deno.env.get('LINE_CHANNEL_SECRET') || Deno.en
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-if (!LINE_LOGIN_CHANNEL_ID || !LINE_LOGIN_CHANNEL_SECRET) {
-    console.error("Missing LINE Login Credentials");
-}
-
 serve(async (req) => {
+    // 0. Handle CORS Preflight
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
     }
 
     try {
-        const { action, code, redirect_uri, profile_data, liff_access_token, line_user_id, display_name, picture_url } = await req.json();
+        // 1. Env Var Check
+        if (!LINE_LOGIN_CHANNEL_ID || !LINE_LOGIN_CHANNEL_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+            console.error("Missing credentials:", { 
+                hasChannelId: !!LINE_LOGIN_CHANNEL_ID, 
+                hasSecret: !!LINE_LOGIN_CHANNEL_SECRET,
+                hasUrl: !!SUPABASE_URL,
+                hasKey: !!SUPABASE_SERVICE_ROLE_KEY
+            });
+            throw new Error("Server configuration error: Missing LINE or Supabase credentials.");
+        }
+
+        const body = await req.json();
+        const { action, code, profile_data, liff_access_token, line_user_id, display_name, picture_url } = body;
+        
+        // Normalize redirect_uri (accept both snake_case and camelCase)
+        const redirect_uri = body.redirect_uri || body.redirectUri;
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-        // 1. Generate Auth URL
+        // 2. Generate Auth URL
         if (action === 'get_auth_url') {
             const authState = crypto.randomUUID();
             const authUrl = new URL('https://access.line.me/oauth2/v2.1/authorize');
             authUrl.searchParams.set('response_type', 'code');
-            authUrl.searchParams.set('client_id', LINE_LOGIN_CHANNEL_ID!);
+            authUrl.searchParams.set('client_id', LINE_LOGIN_CHANNEL_ID);
             authUrl.searchParams.set('redirect_uri', redirect_uri);
             authUrl.searchParams.set('state', authState);
             authUrl.searchParams.set('scope', 'profile openid email');
@@ -41,8 +53,11 @@ serve(async (req) => {
             );
         }
 
-        // 2. Callback Processing
+        // 3. Callback Processing
         if (action === 'callback') {
+            if (!code) throw new Error("Missing 'code' parameter");
+            if (!redirect_uri) throw new Error("Missing 'redirect_uri' parameter");
+
             // Exchange code for token
             const tokenResponse = await fetch('https://api.line.me/oauth2/v2.1/token', {
                 method: 'POST',
@@ -50,13 +65,18 @@ serve(async (req) => {
                 body: new URLSearchParams({
                     grant_type: 'authorization_code',
                     code,
-                    redirect_uri,
-                    client_id: LINE_LOGIN_CHANNEL_ID!,
-                    client_secret: LINE_LOGIN_CHANNEL_SECRET!,
+                    redirect_uri, // now guaranteed to be set if check passed
+                    client_id: LINE_LOGIN_CHANNEL_ID,
+                    client_secret: LINE_LOGIN_CHANNEL_SECRET,
                 }),
             });
 
-            if (!tokenResponse.ok) throw new Error(await tokenResponse.text());
+            if (!tokenResponse.ok) {
+                const errText = await tokenResponse.text();
+                console.error("LINE Token Error:", errText);
+                throw new Error(`LINE Token Exchange Failed: ${errText}`);
+            }
+
             const tokenData = await tokenResponse.json();
 
             // Get Profile
@@ -75,9 +95,11 @@ serve(async (req) => {
             if (lineAccount) {
                 // Login existing
                 const { data: user } = await supabase.auth.admin.getUserById(lineAccount.user_id);
+                if (!user?.user?.email) throw new Error("User email not found");
+
                 const { data: link } = await supabase.auth.admin.generateLink({
                     type: 'magiclink',
-                    email: user.user?.email!,
+                    email: user.user.email,
                 });
 
                 // Update profile
@@ -104,9 +126,8 @@ serve(async (req) => {
             }
         }
 
-        // 3. LIFF Login
+        // 4. LIFF Login
         if (action === 'liff_login') {
-            // Check existing link
             const { data: lineAccount } = await supabase
                 .from('line_accounts')
                 .select('user_id')
@@ -135,7 +156,7 @@ serve(async (req) => {
             return new Response(JSON.stringify({ status: 'new_user' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // 4. Auto Restore
+        // 5. Auto Restore
         if (action === 'auto_restore') {
             const { data: lineAccount } = await supabase
                 .from('line_accounts')
@@ -143,7 +164,10 @@ serve(async (req) => {
                 .eq('line_user_id', line_user_id)
                 .maybeSingle();
 
-            if (!lineAccount) return new Response(JSON.stringify({ error: 'restore_failed' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            if (!lineAccount) {
+                 // Return 200 with error field so frontend handles it gracefully
+                 return new Response(JSON.stringify({ error: 'restore_failed' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            }
 
             const { data: user } = await supabase.auth.admin.getUserById(lineAccount.user_id);
             const { data: link } = await supabase.auth.admin.generateLink({
@@ -157,12 +181,11 @@ serve(async (req) => {
             }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
-        // 5. Register (New User)
+        // 6. Register (New User)
         if (action === 'register') {
             const { email, line_user_id, display_name, picture_url, nickname, area } = profile_data;
             const randomPassword = crypto.randomUUID();
 
-            // Create Auth User
             const { data: authData, error: authError } = await supabase.auth.admin.createUser({
                 email,
                 password: randomPassword,
@@ -172,13 +195,6 @@ serve(async (req) => {
 
             if (authError) throw authError;
 
-            // Create Profile (assume profiles table exists)
-            /* 
-              Usually profile creation is handled by trigger. 
-              But here we ensure line_accounts link.
-            */
-
-            // Link LINE account
             await supabase.from('line_accounts').insert({
                 user_id: authData.user.id,
                 line_user_id,
@@ -187,7 +203,6 @@ serve(async (req) => {
                 is_notification_enabled: true
             });
 
-            // Generate Login Link
             const { data: link } = await supabase.auth.admin.generateLink({
                 type: 'magiclink',
                 email
@@ -203,6 +218,11 @@ serve(async (req) => {
 
     } catch (error) {
         console.error(error);
-        return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        // Return 200 with error details so frontend receives the message instead of 500/400 generic error
+        // Note: We use JSON body to carry the error message
+        return new Response(JSON.stringify({ error: error.message }), { 
+            status: 200, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
     }
 });
