@@ -263,64 +263,21 @@ const App: React.FC = () => {
     localStorage.setItem('loginRole', role);
 
     // LINE Login Channel ID
-    const clientId = '2008784970'; 
-    const redirectUri = window.location.origin; 
+    const clientId = '2008784970';
+    const redirectUri = window.location.origin;
     const state = Math.random().toString(36).substring(7);
     localStorage.setItem('line_auth_state', state);
 
     // LINE認証画面へリダイレクト
     const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=profile%20openid`;
-    
+
     console.log('Redirecting to LINE Auth:', lineAuthUrl);
     window.location.href = lineAuthUrl;
-    
+
     // 以下、古いコード（デッドコード）などはreturnで実行されないようにする
     return;
 
-    /* 
-    // OLD CODE BELOW
 
-
-    try {
-      console.log('Initiating LINE Login via Edge Function...');
-      // Edge Functionに「ログインURLくれ」と頼むエンドポイントがあればベストですが、
-      // 今回作った `line-login` は「コードを受け取ってTokenに変える」機能です。
-      // なので、フロントエンド側でLINEのURLへ飛ばします。
-
-      // 注意: CHANNEL IDが必要です。環境変数が見れないため、ユーザーに入力してもらうか、
-      // Supabase Edge Functionに環境変数が設定されている前提で、Edge FunctionからURLをもらうAPIを追加するのが安全です。
-
-      // 今回は「LINEログインと配信機能を組み立てて」とのことなので、
-      // 既存の `line-login` を少し拡張して、GETリクエストでAuth URLを返すようにするか、
-      // フロントから直接飛ばすか。Channel IDがクライアントに露出しても問題ないため、フロントから飛ばします。
-      // ただしIDが不明です。
-
-      // 仮の処理: 
-      // ユーザーが環境変数を設定した前提で、Edge Function `line-auth-url` (新規作成) を呼ぶか、
-      // あるいは `line-login` に `?action=get_auth_url` を投げるか。
-
-      // ここでは、ユーザー体験を損なわないよう、一旦アラートでID設定を促しつつ、
-      // 以前のOIDC/Native実装ではなく、確実に動く「自前リダイレクト」へ誘導します。
-
-      alert("LINE Channel IDが設定されていません。コード内の `const clientId = 'YOUR_CHANNEL_ID'` を更新してください。");
-      // 本来のリダイレクト処理 (ChannelID設定後に有効化)
-      /*
-      const redirectUri = window.location.origin + '/callback'; // Callbackページが必要
-      const state = Math.random().toString(36).substring(7);
-      localStorage.setItem('line_auth_state', state);
-      
-      const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=profile%20openid`;
-      
-      window.location.href = lineAuthUrl;
-      */
-
-      // デモ用に再度スキップモードに戻しますか？「組み立てて」と言われたので実装が必要です。
-      // 既存のデモモードを維持しつつ、コメントアウトで「本番用コード」を残します。
-
-    } catch (e) {
-      console.error(e);
-      addToast('LINEログインの開始に失敗しました', 'error');
-    }
 
     // --- 以下、現状のデモモード（IDがないため） ---
     // 認証プロセスをすべてスキップし、即座にログイン完了とみなす
