@@ -1,4 +1,3 @@
-```typescript
 import React, { useState } from 'react';
 import { SAITAMA_MUNICIPALITIES, PREFECTURES, MUNICIPALITY_COORDINATES } from '../constants'; // Import areas
 
@@ -19,13 +18,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
     const handleRegister = () => {
         if (!nickname || !municipality) return;
         // Combine Prefecture and Municipality
-        const fullArea = `${ selectedPrefecture }${ municipality } `;
+        const fullArea = `${selectedPrefecture}${municipality}`;
         const allAreas = Array.from(new Set([fullArea, ...interestAreas]));
         onPreRegister(nickname, allAreas);
     };
 
     const toggleInterestArea = (area: string) => {
-        const fullArea = `${ selectedPrefecture }${ municipality } `;
+        const fullArea = `${selectedPrefecture}${municipality}`;
         if (fullArea === area) return; // Ignore if it's the living area
         if (interestAreas.includes(area)) {
             setInterestAreas(interestAreas.filter(a => a !== area));
@@ -45,11 +44,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                 // Mock implementation for demo - usually requires Reverse Geocoding API
                 // Here we just set a default for demo if geolocation works
                 // 本来は Google Maps API 等で座標から住所を取得します
-                
+
                 // For demo purpose, pick a random city in the selected prefecture or near Tokyo
                 setMunicipality('大宮区'); // Demo fallback
                 setSelectedPrefecture('埼玉県');
-                
+
                 setIsLocating(false);
             },
             (error) => {
@@ -99,12 +98,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                                             <i className="fas fa-chevron-down"></i>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Municipality Input */}
                                     <div className="flex gap-2">
-                                        <input 
+                                        <input
                                             type="text"
-                                            placeholder="市区町村 (例: 三郷市)" 
+                                            placeholder="市区町村 (例: 三郷市)"
                                             value={municipality}
                                             onChange={(e) => setMunicipality(e.target.value)}
                                             className="flex-1 bg-emerald-50 border border-emerald-100 px-5 py-4 rounded-xl font-bold outline-none focus:ring-2 focus:ring-emerald-500/20 text-emerald-800"
@@ -196,7 +195,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLogin, onPreRegister }) => 
                             <i className="fab fa-line text-2xl"></i>
                             LINEで新規登録
                         </button>
-                        
+
                         {/* Login Button (Mobile/Hero emphasis) */}
                         <button
                             onClick={onLogin}
