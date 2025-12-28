@@ -115,6 +115,9 @@ serve(async (req) => {
         const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
             type: 'magiclink',
             email: email,
+            options: {
+                redirectTo: redirectUri
+            }
         })
 
         if (linkError) {
