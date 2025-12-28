@@ -9,8 +9,9 @@ import {
 } from "../lib/liff";
 import { supabase } from "../services/supabaseService";
 
-// USER Provided LIFF ID (from reference project)
+// Use the LIFF ID from reference
 const LIFF_ID = "2008600703-aNmdY4Nq";
+// Only update this if the deployment URL changes significantly, but typically handled by LIFF console
 const LIFF_BASE_URL = `https://liff.line.me/${LIFF_ID}`;
 
 interface LiffAutoAuthResult {
@@ -22,9 +23,8 @@ interface LiffAutoAuthResult {
     error: string | null;
 }
 
-// Public pages that don't require LIFF login
-// Adjust paths for this project
-const PUBLIC_PATHS = ["/", "/auth/line/callback", "/terms"];
+// Public pages that don't require LIFF login (adjusted for this project)
+const PUBLIC_PATHS = ["/", "/index.html"];
 
 const getLiffState = (): string | null => {
     const params = new URLSearchParams(window.location.search);
@@ -67,7 +67,7 @@ export const useLiffAutoAuth = (
     const [hasAttemptedRestore, setHasAttemptedRestore] = useState(false);
     const [hasAttemptedLogin, setHasAttemptedLogin] = useState(false);
 
-    // LIFF経由で /?liff.state=... になっても、public扱いでスキップしないため
+    // Check if we look like we are in LIFF flow (url param)
     const initialProcessing = useMemo(() => {
         const effectivePath = getEffectivePathnameForAccessControl();
         const looksLikeLiff = !!getLiffState();
@@ -97,13 +97,12 @@ export const useLiffAutoAuth = (
                 setIsInLiff(inLine);
                 setIsLiffUserLoggedIn(loggedIn);
 
-                // そもそもLINEアプリ内でなければ自動処理は終了
+                // If not in LINE app, stop processing
                 if (!inLine) {
                     setIsLiffProcessing(false);
                     return;
                 }
 
-                // 有効パスがpublicなら処理しない
                 const effectivePath = getEffectivePathnameForAccessControl();
                 if (isPublicPath(effectivePath)) {
                     setIsLiffProcessing(false);
@@ -122,7 +121,7 @@ export const useLiffAutoAuth = (
         const handleAuth = async () => {
             const effectivePath = getEffectivePathnameForAccessControl();
 
-            // Skip for public pages (effective)
+            // Skip for public pages
             if (isPublicPath(effectivePath)) {
                 setIsLiffProcessing(false);
                 return;
@@ -137,7 +136,7 @@ export const useLiffAutoAuth = (
             // Wait for LIFF init
             if (!isLiffInitialized) return;
 
-            // Not in LINE client => don't attempt LIFF login
+            // Not in LINE client
             if (!isInLiff) {
                 setIsLiffProcessing(false);
                 return;
@@ -147,7 +146,6 @@ export const useLiffAutoAuth = (
             if (!isLiffUserLoggedIn && !hasAttemptedLogin) {
                 setHasAttemptedLogin(true);
 
-                // IMPORTANT: use LIFF URL + intended path (including query) so post-login lands correctly
                 const target = getEffectiveTargetForRedirect();
                 const redirectUri = `${LIFF_BASE_URL}${target}`;
                 liffLogin(redirectUri);
@@ -168,7 +166,6 @@ export const useLiffAutoAuth = (
                         return;
                     }
 
-                    console.log('[LIFF] Invoking line-login with liff_access_token');
                     const { data, error: fnError } = await supabase.functions.invoke("line-login", {
                         body: {
                             action: "liff_login",
@@ -180,37 +177,42 @@ export const useLiffAutoAuth = (
                     });
 
                     if (fnError) {
-                        console.error('[LIFF] line-login invocation failed:', fnError);
                         setError(fnError.message);
                         setIsLiffProcessing(false);
                         return;
                     }
 
-                    if (data?.error) {
-                        console.error('[LIFF] line-login returned error:', data.error);
-                        setError(data.error);
+                    // New user - store profile for registration
+                    if (data?.status === "new_user") {
+                        localStorage.setItem(
+                            "line_profile",
+                            JSON.stringify({
+                                line_user_id: profile.userId,
+                                display_name: profile.displayName,
+                                picture_url: profile.pictureUrl,
+                            })
+                        );
                         setIsLiffProcessing(false);
+                        // Redirect to root, App will handle registration modal
+                        if (window.location.pathname !== '/') {
+                            window.location.href = "/";
+                        }
                         return;
                     }
 
-                    // Existing user - verify OTP to create session using token_hash
+                    // Existing user - verify OTP to create session
                     if (data?.token_hash) {
-                        console.log('[LIFF] Got token_hash, verifying OTP...');
                         const { error: otpError } = await supabase.auth.verifyOtp({
                             token_hash: data.token_hash,
                             type: "magiclink",
                         });
 
                         if (otpError) {
-                            console.error('[LIFF] verifyOtp failed:', otpError);
                             setError(otpError.message);
                         } else {
-                            console.log('[LIFF] Session restored successfully.');
                             localStorage.setItem("linked_line_user_id", profile.userId);
                             onSessionRestored();
                         }
-                    } else {
-                        console.log('[LIFF] No token_hash returned (maybe new user or status flow).', data);
                     }
                 } catch (err) {
                     setError(err instanceof Error ? err.message : "Auto-restore failed");

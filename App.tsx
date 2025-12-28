@@ -31,20 +31,12 @@ const App: React.FC = () => {
     tempUser,
     setTempUser,
     isLoading: isAuthLoading,
-    isAuthChecking: isSupabaseAuthChecking,
+    isAuthChecking,
     logout,
     revalidateProfile,
     checkSession
   } = useAuth();
 
-  // LIFF Auto Auth
-  const { isLiffProcessing, isRestoring: isLiffRestoring } = useLiffAutoAuth(
-    !!user,
-    () => revalidateProfile()
-  );
-
-  // Combine auth checking states
-  const isAuthChecking = isSupabaseAuthChecking || isLiffProcessing || isLiffRestoring;
   const [activeTab, setActiveTab] = useState('feed');
   const [isLoading, setIsLoading] = useState(false); // Content loading state
   const [posts, setPosts] = useState<Post[]>([]);

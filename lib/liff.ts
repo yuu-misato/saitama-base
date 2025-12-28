@@ -1,4 +1,4 @@
-import { supabase } from '../services/supabaseService';
+import { logger } from './logger';
 
 declare global {
     interface Window {
@@ -7,12 +7,6 @@ declare global {
 }
 
 let liffInitialized = false;
-
-// ログ出力ヘルパー
-const logger = {
-    log: (...args: any[]) => console.log('[LIFF]', ...args),
-    error: (...args: any[]) => console.error('[LIFF]', ...args),
-};
 
 export const initLiff = async (liffId: string): Promise<boolean> => {
     if (liffInitialized) return true;
@@ -77,8 +71,7 @@ export const getLiffProfile = async (): Promise<{
 } | null> => {
     if (!window.liff || !liffInitialized) return null;
     try {
-        const profile = await window.liff.getProfile();
-        return profile;
+        return await window.liff.getProfile();
     } catch (error) {
         logger.error('Failed to get LIFF profile:', error);
         return null;
@@ -88,4 +81,16 @@ export const getLiffProfile = async (): Promise<{
 export const closeLiffWindow = (): void => {
     if (!window.liff || !liffInitialized) return;
     window.liff.closeWindow();
+};
+
+export const openInExternalBrowser = (url: string): void => {
+    if (!window.liff || !liffInitialized) {
+        window.open(url, '_blank');
+        return;
+    }
+
+    window.liff.openWindow({
+        url,
+        external: true
+    });
 };
