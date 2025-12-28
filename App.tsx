@@ -952,41 +952,14 @@ const App: React.FC = () => {
               ))}
             </div>
 
-            {/* Add Area Dropdown */}
-            <div className="bg-slate-50 p-6 rounded-3xl border-2 border-dashed border-slate-200 hover:border-emerald-200 transition-colors">
-              <label className="block text-sm font-black text-slate-500 mb-3 flex items-center gap-2">
-                <i className="fas fa-plus-circle text-emerald-500"></i>
-                新しいエリアを追加
-              </label>
-              <div className="relative">
-                <select
-                  className="w-full p-4 pr-10 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-emerald-100 appearance-none cursor-pointer"
-                  value=""
-                  onChange={async (e) => {
-                    const area = e.target.value;
-                    if (area && !selectedAreas.includes(area)) {
-                      const newAreas = [...selectedAreas, area];
-                      setSelectedAreas(newAreas);
-                      // DB Sync Logic
-                      if (user) {
-                        const updatedUser = { ...user, selectedAreas: newAreas };
-                        await createProfile(updatedUser);
-                        setUser(updatedUser);
-                        addToast(`${area}を追加しました`, 'success');
-                      }
-                    }
-                  }}
-                >
-                  <option value="" disabled>市町村を選択してください</option>
-                  {SAITAMA_MUNICIPALITIES.filter(m => !selectedAreas.includes(m)).map(m => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                  <i className="fas fa-chevron-down"></i>
-                </div>
-              </div>
-            </div>
+            {/* Add/Edit Area Button (Using Modal) */}
+            <button
+              onClick={() => setIsEditingProfile(true)}
+              className="w-full bg-slate-50 p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-emerald-200 hover:bg-emerald-50 transition-all text-slate-500 hover:text-emerald-600 font-bold flex items-center justify-center gap-2 mb-6"
+            >
+              <i className="fas fa-map-marker-alt"></i>
+              エリアを追加・変更する
+            </button>
 
             <div className="bg-emerald-50 rounded-xl p-4 mb-8 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1013,9 +986,7 @@ const App: React.FC = () => {
                 onClick={() => {
                   const confirm = window.confirm('ログアウトしますか？');
                   if (confirm) {
-                    localStorage.removeItem('saitama_user_id');
-                    sessionStorage.clear();
-                    setUser(null);
+                    logout();
                     window.location.href = '/';
                   }
                 }}
