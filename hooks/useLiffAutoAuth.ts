@@ -9,8 +9,8 @@ import {
 } from "../lib/liff";
 import { supabase } from "../services/supabaseService";
 
-// Use the LIFF ID from reference
-const LIFF_ID = "2008600703-aNmdY4Nq";
+// Use the LIFF ID from user
+const LIFF_ID = "2008784970-Izb0ykCR";
 // Only update this if the deployment URL changes significantly, but typically handled by LIFF console
 const LIFF_BASE_URL = `https://liff.line.me/${LIFF_ID}`;
 
