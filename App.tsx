@@ -23,6 +23,7 @@ const App: React.FC = () => {
   const [tempUser, setTempUser] = useState<User | null>(null); // 新規登録用一時ステート
   const [activeTab, setActiveTab] = useState('feed');
   const [isLoading, setIsLoading] = useState(true); // Loading state
+  const [isAuthChecking, setIsAuthChecking] = useState(true); // Auth check state
   const [posts, setPosts] = useState<Post[]>([]);
   const [kairanbans, setKairanbans] = useState<Kairanban[]>([]);
   const [missions, setMissions] = useState<VolunteerMission[]>([]);
@@ -69,6 +70,10 @@ const App: React.FC = () => {
 
     // 1. まずローカルストレージを確認 (優先)
     const storedUserId = localStorage.getItem('saitama_user_id');
+    const params = new URLSearchParams(window.location.search);
+    const hasCode = params.get('code');
+    const hasState = params.get('state');
+
     if (storedUserId) {
       getProfile(storedUserId).then(({ data, error }) => {
         if (data && !error) {
@@ -84,11 +89,23 @@ const App: React.FC = () => {
             isLineConnected: true
           });
           setSelectedAreas(data.selected_areas || ['さいたま市大宮区']);
+          setIsAuthChecking(false); // Restore complete
         } else {
           // IDはあるがDBにない場合（削除された等）、クリアする
           localStorage.removeItem('saitama_user_id');
+          // If we are about to process LINE login, keep loading
+          if (!hasCode || !hasState) {
+            setIsAuthChecking(false);
+          }
         }
+      }).catch(() => {
+        if (!hasCode || !hasState) setIsAuthChecking(false);
       });
+    } else {
+      // No stored session. If not handling callback, stop loading.
+      if (!hasCode || !hasState) {
+        setIsAuthChecking(false);
+      }
     }
 
     // 2. Supabase Auth (Magic Link Redirect Handling)
@@ -113,15 +130,18 @@ const App: React.FC = () => {
           setUser(appUser);
           setSelectedAreas(appUser.selectedAreas);
           localStorage.setItem('saitama_user_id', appUser.id);
+          setIsAuthChecking(false); // Auth complete
           addToast('ログインしました', 'success');
         } else {
           // New user (or profile missing) - create from Session Meta
           console.log('No profile found, creating new...');
           const meta = session.user.user_metadata;
+          const loginRole = localStorage.getItem('loginRole') || 'resident';
+
           const newUser: User = {
             id: session.user.id,
             nickname: meta.nickname || 'ゲスト',
-            role: 'resident',
+            role: loginRole as any, // Restore role
             avatar: meta.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + session.user.id,
             level: 1,
             score: 100,
@@ -132,6 +152,7 @@ const App: React.FC = () => {
           setUser(newUser);
           setSelectedAreas(newUser.selectedAreas);
           localStorage.setItem('saitama_user_id', newUser.id);
+          setIsAuthChecking(false); // Auth complete
           addToast('アカウントを作成しました', 'success');
         }
       }
@@ -603,6 +624,15 @@ const App: React.FC = () => {
     }
 
     // 通常の未ログイン状態はランディングページを表示
+    if (isAuthChecking) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-white flex-col">
+          <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full mb-4"></div>
+          <p className="text-slate-500 font-bold animate-pulse">読み込み中...</p>
+        </div>
+      );
+    }
+
     return <LandingPage
       onLogin={() => handleLineLogin('resident')}
       onPreRegister={handlePreRegister} // 新規フロー
