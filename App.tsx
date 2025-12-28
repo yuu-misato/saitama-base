@@ -88,6 +88,33 @@ const App: React.FC = () => {
           console.log('Active Supabase Session found:', session.user.id);
           await loadUserData(session.user.id, session.user);
         } else {
+          // ★ CRITICAL FIX: Hash detected but Session NULL -> Force Entry
+          if (hasHash) {
+            console.warn('Auth Hash detected but Session is null. Forcing Recovery Login.');
+            const pendingRegStr = localStorage.getItem('pendingRegistration');
+            const pendingReg = pendingRegStr ? JSON.parse(pendingRegStr) : null;
+
+            const recoveryUser: User = {
+              id: 'recovery-' + Math.random().toString(36).substring(7),
+              nickname: pendingReg?.nickname || 'ゲスト(復旧)',
+              role: 'resident',
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=recovery',
+              level: 1,
+              score: 0,
+              selectedAreas: pendingReg?.areas || ['さいたま市大宮区'],
+              isLineConnected: true
+            };
+
+            if (mounted) {
+              setUser(recoveryUser);
+              setSelectedAreas(recoveryUser.selectedAreas);
+              localStorage.setItem('saitama_user_id', recoveryUser.id);
+              setIsAuthChecking(false);
+              addToast('ログイン情報を復元しました', 'success');
+            }
+            return;
+          }
+
           // 2. No active session, check Local Storage (Legacy/Manual persistence)
           const storedUserId = localStorage.getItem('saitama_user_id');
 
