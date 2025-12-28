@@ -165,30 +165,34 @@ serve(async (req) => {
             }
 
             // If No Link but Email Present -> Auto Register
-            if (userEmail) {
-                console.log("No link found, but email present. Auto-registering/linking...");
+            // FORCE AUTO REGISTRATION: If email missing, use placeholder to skip manual input
+            const emailToUse = userEmail || `${lineProfile.userId}@line.login.dummy`; // Fallback to dummy email to skip UI
+
+            if (emailToUse) {
+                console.log("Proceeding with Auto-Registration/Link using:", emailToUse);
 
                 let userId;
                 const randomPassword = crypto.randomUUID();
 
                 // Try creating user (or fail if exists)
                 const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-                    email: userEmail,
+                    email: emailToUse,
                     password: randomPassword,
                     email_confirm: true,
                     user_metadata: {
                         nickname: lineProfile.displayName,
-                        avatar_url: lineProfile.pictureUrl
+                        avatar_url: lineProfile.pictureUrl,
+                        is_line_placeholder_email: !userEmail // Flag for future reference
                     }
                 });
 
                 if (authError) {
                     // Check if user exists to link
                     if (authError.message?.includes('already been registered') || authError.status === 422 || authError.code === 'email_exists') {
-                        console.log("User email exists, attempting linkage for:", userEmail);
+                        console.log("User email exists, attempting linkage for:", emailToUse);
                         const { data: userLinkData } = await supabase.auth.admin.generateLink({
                             type: 'magiclink',
-                            email: userEmail
+                            email: emailToUse
                         });
                         if (userLinkData?.user) {
                             userId = userLinkData.user.id;
@@ -217,7 +221,7 @@ serve(async (req) => {
                 // Generate Session
                 const { data: link } = await supabase.auth.admin.generateLink({
                     type: 'magiclink',
-                    email: userEmail
+                    email: emailToUse
                 });
 
                 return new Response(JSON.stringify({
@@ -225,16 +229,6 @@ serve(async (req) => {
                     status: 'registered_automatically'
                 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
-
-            // Final Fallback: New User (Requires Email Input)
-            return new Response(JSON.stringify({
-                status: 'new_user',
-                line_profile: {
-                    line_user_id: lineProfile.userId,
-                    display_name: lineProfile.displayName,
-                    picture_url: lineProfile.pictureUrl
-                }
-            }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
         // 6. Register (Manual Fallback)
