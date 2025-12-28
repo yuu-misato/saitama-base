@@ -185,8 +185,8 @@ const App: React.FC = () => {
           // Try to save to DB (Upsert) - Retry logic on DB
           const { error: createError } = await createProfile(fallbackUser);
           if (createError) {
-            console.warn('Failed to Create/Upsert Profile, using in-memory fallback:', createError);
-            addToast('プロフィールの保存に失敗しましたが、一時的にログインします', 'info');
+            console.error('Critical: Profile Sync Failed:', createError);
+            addToast('⚠ プロフィールの保存に失敗しました。再ログイン時に解消する可能性があります。', 'error');
           } else {
             addToast('アカウントを同期しました', 'success');
           }
