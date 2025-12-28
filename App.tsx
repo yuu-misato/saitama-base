@@ -122,18 +122,29 @@ const App: React.FC = () => {
           const storedUserId = localStorage.getItem('saitama_user_id');
           if (storedUserId) {
             console.log('Attempting restoration from LocalStorage:', storedUserId);
-            // Try to fetch latest profile, but if it fails (e.g. RLS error due to expired session), use minimal data to KEEP LOGGED IN.
-            const { data: profile } = await getProfile(storedUserId);
+
+            // Try explicit local profile first (High reliability)
+            let profile: any = null;
+            const localProfileJson = localStorage.getItem('saitama_user_profile');
+            if (localProfileJson) {
+              try { profile = JSON.parse(localProfileJson); } catch (e) { console.error(e); }
+            }
+
+            // If not found locally, try DB
+            if (!profile) {
+              const res = await getProfile(storedUserId);
+              profile = res.data;
+            }
 
             // Fallback profile if DB fetch fails but ID exists
             const restoredUser: User = {
               id: storedUserId,
               nickname: profile?.nickname || localStorage.getItem('saitama_user_nickname') || 'ユーザー',
               role: (profile?.role as any) || 'resident',
-              avatar: profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + storedUserId,
+              avatar: profile?.avatar || profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + storedUserId,
               score: profile?.score || 0,
               level: profile?.level || 1,
-              selectedAreas: profile?.selected_areas || ['さいたま市大宮区'],
+              selectedAreas: profile?.selectedAreas || profile?.selected_areas || ['さいたま市大宮区'],
               isLineConnected: true
             };
 
