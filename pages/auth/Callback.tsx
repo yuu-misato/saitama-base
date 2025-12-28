@@ -129,6 +129,8 @@ const Callback = () => {
                 if (otpError) throw otpError;
 
                 if (authData?.session) {
+                    // CRITICAL: Explicitly set session to ensure persistence
+                    await supabase.auth.setSession(authData.session);
                     await checkSession(authData.session);
                 } else {
                     await checkSession();

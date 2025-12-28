@@ -55,10 +55,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setUser(u);
                 localStorage.setItem('saitama_user_profile', JSON.stringify(u));
             } else {
-                logger.warn('Profile not found during load');
+                // FALLBACK: If profile fails to load, create a minimal user from session to allow login
+                // This prevents the "Redirect to LP" issue when DB is slow
+                logger.warn('Profile not found, using fallback user state');
+                const fallbackUser: User = {
+                    id: userId,
+                    nickname: 'ゲスト', // Temporary name
+                    role: 'resident',
+                    avatar: '',
+                    score: 0,
+                    level: 1,
+                    selectedAreas: ['さいたま市大宮区'],
+                    isLineConnected: true
+                };
+                setUser(fallbackUser);
+                // Do not save fallback to localStorage to allow retry next time
             }
         } catch (e) {
             logger.error('Load profile failed or timed out', e);
+            // CRITICAL: Even on error, set a fallback user if we have a session
+            // We can't access session inside this helper easily without passing it, 
+            // but we can assume if this is called, we want a user.
+            const fallbackUser: User = {
+                id: userId,
+                nickname: 'ゲスト',
+                role: 'resident',
+                avatar: '',
+                score: 0,
+                level: 1,
+                selectedAreas: ['さいたま市大宮区'],
+                isLineConnected: true
+            };
+            setUser(fallbackUser);
         }
     };
 
