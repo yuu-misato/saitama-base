@@ -1,4 +1,7 @@
 import { Post, LocalEvent, Coupon, Kairanban, VolunteerMission } from './types';
+import { MUNICIPALITIES_BY_PREFECTURE } from './data/municipalities';
+
+export { MUNICIPALITIES_BY_PREFECTURE };
 
 export const SAITAMA_MUNICIPALITIES = [
   "さいたま市大宮区", "さいたま市浦和区", "さいたま市中央区", "さいたま市西区", "さいたま市北区",
