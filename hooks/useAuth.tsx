@@ -32,7 +32,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Helper to load profile
     const loadProfile = async (userId: string) => {
         try {
-            const { data } = await getProfile(userId);
+            // Timeout for profile loading as well
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Profile load timed out')), 4000)
+            );
+
+            const profilePromise = getProfile(userId);
+            const { data } = await Promise.race([profilePromise, timeoutPromise]) as any;
+
             if (data) {
                 const u: User = {
                     id: userId,
@@ -47,9 +54,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 };
                 setUser(u);
                 localStorage.setItem('saitama_user_profile', JSON.stringify(u));
+            } else {
+                logger.warn('Profile not found during load');
             }
         } catch (e) {
-            logger.error('Load profile failed', e);
+            logger.error('Load profile failed or timed out', e);
         }
     };
 
@@ -72,7 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (!s) {
                 // Race against a timeout to prevent infinite loading
                 const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Session check timed out')), 5000)
+                    setTimeout(() => reject(new Error('Session check timed out')), 4000)
                 );
 
                 const sessionPromise = supabase.auth.getSession();
@@ -88,8 +97,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } catch (e) {
             console.error('Session check error or timeout:', e);
             // On error/timeout, assume no session to allow UI to render
-            // But if we already have a session, keep it? No, timeout means something wrong.
-            // Only set null if we were genuinely checking.
             if (!manualSession) setSession(null);
         } finally {
             setIsAuthChecking(false);
