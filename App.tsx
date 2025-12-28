@@ -1337,6 +1337,7 @@ const App: React.FC = () => {
       <Toast toasts={toasts} onRemove={(id) => setToasts(prev => prev.filter(t => t.id !== id))} />
 
       {renderContent()}
+      <DebugPanel />
     </Layout>
   );
 };
