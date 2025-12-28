@@ -73,6 +73,7 @@ const App: React.FC = () => {
     // params is already declared above
     const hasCode = params.get('code');
     const hasState = params.get('state');
+    const hasHash = window.location.hash.includes('access_token') || window.location.hash.includes('type=recovery');
 
     if (storedUserId) {
       getProfile(storedUserId).then(({ data, error }) => {
@@ -93,17 +94,17 @@ const App: React.FC = () => {
         } else {
           // IDはあるがDBにない場合（削除された等）、クリアする
           localStorage.removeItem('saitama_user_id');
-          // If we are about to process LINE login, keep loading
-          if (!hasCode || !hasState) {
+          // If we are about to process LINE login or Hash redirect, keep loading
+          if ((!hasCode || !hasState) && !hasHash) {
             setIsAuthChecking(false);
           }
         }
       }).catch(() => {
-        if (!hasCode || !hasState) setIsAuthChecking(false);
+        if ((!hasCode || !hasState) && !hasHash) setIsAuthChecking(false);
       });
     } else {
-      // No stored session. If not handling callback, stop loading.
-      if (!hasCode || !hasState) {
+      // No stored session. If not handling callback/hash, stop loading.
+      if ((!hasCode || !hasState) && !hasHash) {
         setIsAuthChecking(false);
       }
     }
@@ -159,6 +160,9 @@ const App: React.FC = () => {
     });
 
     // 3. Safety Timeout (Final Fallback)
+    // If consuming hash, give more time (10s), else 4s
+    const timeoutDuration = hasHash ? 10000 : 4000;
+
     const safetyTimer = setTimeout(() => {
       setIsAuthChecking((prev) => {
         if (prev) {
@@ -167,7 +171,7 @@ const App: React.FC = () => {
         }
         return prev;
       });
-    }, 4000); // 4秒で強制解除
+    }, timeoutDuration);
 
     return () => {
       subscription.unsubscribe();
