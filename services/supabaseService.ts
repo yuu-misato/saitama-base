@@ -11,22 +11,32 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 /**
  * 住民・事業者のプロファイル管理
  */
-export const createProfile = async (user: any) => { // Changed User to any for simplicity, assuming type definition is elsewhere
+export const createProfile = async (user: any) => {
+  if (!user.id) {
+    console.error('CRITICAL: Attempted to create profile without User ID');
+    return { data: null, error: { message: 'User ID is missing' } };
+  }
+
+  const payload = {
+    id: user.id,
+    nickname: user.nickname || '名無し',
+    avatar_url: user.avatar || user.avatar_url || '',
+    role: user.role || 'resident',
+    level: user.level || 1,
+    score: user.score || 0,
+    selected_areas: user.selectedAreas || user.selected_areas || [],
+    updated_at: new Date().toISOString()
+  };
+
+  console.log('Upserting Profile Payload:', payload);
+
   const { data, error } = await supabase
     .from('profiles')
-    .upsert({
-      id: user.id || undefined, // UUIDが自動生成されるか、またはLINE IDをハッシュ化したものを使う
-      nickname: user.nickname,
-      avatar_url: user.avatar,
-      role: user.role,
-      level: user.level || 1,
-      score: user.score || 0,
-      selected_areas: user.selectedAreas,
-    }, { onConflict: 'id' }) // Explicitly handle conflicts on 'id'
+    .upsert(payload, { onConflict: 'id' })
     .select();
 
   if (error) {
-    console.error('FAILED TO SAVE PROFILE TO DB:', error);
+    console.error('FAILED TO SAVE PROFILE TO DB (RLS or Constraint Error):', error);
   } else {
     console.log('Profile saved successfully:', data);
   }
