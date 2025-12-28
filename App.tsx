@@ -262,15 +262,24 @@ const App: React.FC = () => {
   const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
     localStorage.setItem('loginRole', role);
 
-    // 1. Edge FunctionからLINE認証URLを取得する (自作ログインフロー)
-    // 本来は直接LINEのAuthorize URLへリダイレクトでも良いが、state生成などをFunction側でやる設計も可。
-    // ここではシンプルに、フロントエンドからLINEのAuthorize URLへリダイレクトし、
-    // CallbackでEdge Functionを叩くフローにします。
+    // LINE Login Channel ID
+    const clientId = '2008784970'; 
+    const redirectUri = window.location.origin; 
+    const state = Math.random().toString(36).substring(7);
+    localStorage.setItem('line_auth_state', state);
 
-    // LINE Login URL構築
-    const clientId = '2006734563'; // LINE Channel ID (本来は環境変数から取得推奨) - ユーザー提供待ちだが一旦プレースホルダー
-    // ※ユーザーから提供されていないため、まずはデモモードではなく「実装の枠組み」を作ります。
-    // しかしCHANNEL IDがないと動かないため、ここではユーザーにID入力を促す、あるいはEdge Function側でRedirect URLを発行する形にします。
+    // LINE認証画面へリダイレクト
+    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=profile%20openid`;
+    
+    console.log('Redirecting to LINE Auth:', lineAuthUrl);
+    window.location.href = lineAuthUrl;
+    
+    // 以下、古いコード（デッドコード）などはreturnで実行されないようにする
+    return;
+
+    /* 
+    // OLD CODE BELOW
+
 
     try {
       console.log('Initiating LINE Login via Edge Function...');
