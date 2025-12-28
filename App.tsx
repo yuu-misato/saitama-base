@@ -1121,8 +1121,8 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-black text-slate-800">マイエリア設定 (Real-time Sync)</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-black text-slate-800">マイエリア設定</h3>
               <button
                 onClick={() => {
                   if (!navigator.geolocation) {
@@ -1172,15 +1172,73 @@ const App: React.FC = () => {
                     addToast('位置情報の取得に失敗しました: ' + err.message, 'error');
                   }, { enableHighAccuracy: true, timeout: 10000 });
                 }}
-                className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-lg font-bold flex items-center gap-1 hover:bg-slate-700"
+                className="bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-slate-700 transition flex items-center gap-2"
               >
-                <i className="fas fa-location-arrow"></i> 現在地から追加
+                <i className="fas fa-map-marker-alt"></i> 現在地から追加
               </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {SAITAMA_MUNICIPALITIES.map(area => (
-                <button key={area} onClick={() => setSelectedAreas(selectedAreas.includes(area) ? selectedAreas.filter(a => a !== area) : [...selectedAreas, area])} className={`text-[10px] p-2 rounded-xl border font-bold transition-all ${selectedAreas.includes(area) ? 'bg-emerald-50 border-emerald-600 text-emerald-700' : 'bg-white border-slate-200 text-slate-500'}`}>{area}</button>
+
+            {/* Selected Areas Tags */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              {selectedAreas.length === 0 && <p className="text-slate-400 text-sm font-bold">まだエリアが設定されていません</p>}
+              {selectedAreas.map(area => (
+                <span key={area} className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 font-bold rounded-full text-sm animate-in zoom-in">
+                  {area}
+                  <button
+                    onClick={async () => {
+                      const newAreas = selectedAreas.filter(a => a !== area);
+                      setSelectedAreas(newAreas);
+                      // DB Sync Logic
+                      if (user) {
+                        const updatedUser = { ...user, selectedAreas: newAreas };
+                        await createProfile(updatedUser);
+                        setUser(updatedUser);
+                        addToast(`${area}を解除しました`, 'info');
+                      }
+                    }}
+                    className="w-5 h-5 rounded-full bg-emerald-100 hover:bg-emerald-200 text-emerald-600 flex items-center justify-center transition"
+                    aria-label={`${area}を削除`}
+                  >
+                    <i className="fas fa-times text-xs"></i>
+                  </button>
+                </span>
               ))}
+            </div>
+
+            {/* Add Area Dropdown */}
+            <div className="bg-slate-50 p-6 rounded-3xl border-2 border-dashed border-slate-200 hover:border-emerald-200 transition-colors">
+              <label className="block text-sm font-black text-slate-500 mb-3 flex items-center gap-2">
+                <i className="fas fa-plus-circle text-emerald-500"></i>
+                新しいエリアを追加
+              </label>
+              <div className="relative">
+                <select
+                  className="w-full p-4 pr-10 rounded-xl bg-white border border-slate-200 font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-emerald-100 appearance-none cursor-pointer"
+                  value=""
+                  onChange={async (e) => {
+                    const area = e.target.value;
+                    if (area && !selectedAreas.includes(area)) {
+                      const newAreas = [...selectedAreas, area];
+                      setSelectedAreas(newAreas);
+                      // DB Sync Logic
+                      if (user) {
+                        const updatedUser = { ...user, selectedAreas: newAreas };
+                        await createProfile(updatedUser);
+                        setUser(updatedUser);
+                        addToast(`${area}を追加しました`, 'success');
+                      }
+                    }
+                  }}
+                >
+                  <option value="" disabled>市町村を選択してください</option>
+                  {SAITAMA_MUNICIPALITIES.filter(m => !selectedAreas.includes(m)).map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                  <i className="fas fa-chevron-down"></i>
+                </div>
+              </div>
             </div>
 
             <div className="bg-emerald-50 rounded-xl p-4 mb-8 flex items-center justify-between">
