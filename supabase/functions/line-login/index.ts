@@ -17,9 +17,9 @@ serve(async (req) => {
 
         // 1. Check Env Vars
         const clientId = Deno.env.get('LINE_CHANNEL_ID')
-        constclientSecret = Deno.env.get('LINE_CHANNEL_SECRET')
+        const clientSecret = Deno.env.get('LINE_CHANNEL_SECRET')
         const supabaseUrl = Deno.env.get('SUPABASE_URL')
-        const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+        const supabaseServiceRoleKey = Deno.env.get('SERVICE_ROLE_KEY')
 
         if (!clientId || !clientSecret || !supabaseUrl || !supabaseServiceRoleKey) {
             throw new Error('Missing environment variables')
