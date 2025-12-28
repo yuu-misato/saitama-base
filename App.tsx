@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from './components/Layout';
+import DebugPanel from './components/DebugPanel';
 import PostCard from './components/PostCard';
 import CouponList from './components/CouponList';
 import ChokaiPanel from './components/ChokaiPanel';
