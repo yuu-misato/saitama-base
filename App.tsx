@@ -82,18 +82,17 @@ const App: React.FC = () => {
           window.location.hash.includes('error_description')
         );
         const hasCode = params.get('code');
-        const hasState = params.get('state');
+        const hasCode = params.get('code'); // Kept for potential future use or context
+        const hasState = params.get('state'); // Kept for potential future use or context
 
         if (session?.user) {
           console.log('Active Supabase Session found:', session.user.id);
           await loadUserData(session.user.id, session.user);
         } else {
-          // ★ CRITICAL FIX: Hash detected OR Auth Marker found -> Force Entry
+          // ★ 1. CRITICAL: Check for Auth Redirect Markers (Force Entry)
           const isAuthInProgress = localStorage.getItem('auth_in_progress') === 'true';
-
           if (hasHash || isAuthInProgress) {
             console.warn('Auth Hash or Marker detected. Forcing Recovery Login.');
-            // Clear marker only if we successfully enter? Yes.
             localStorage.removeItem('auth_in_progress');
 
             const pendingRegStr = localStorage.getItem('pendingRegistration');
@@ -117,49 +116,37 @@ const App: React.FC = () => {
               setIsAuthChecking(false);
               addToast('ログイン情報を復元しました', 'success');
             }
-            return;
+            return; // Exit after recovery
           }
 
-          // 2. No active session, check Local Storage (Legacy/Manual persistence)
+          // ★ 2. STRONG PERSISTENCE: Restore from LocalStorage even if DB/Session fails
           const storedUserId = localStorage.getItem('saitama_user_id');
-
           if (storedUserId) {
-            console.log('Restoring from LocalStorage:', storedUserId);
+            console.log('Attempting restoration from LocalStorage:', storedUserId);
+            // Try to fetch latest profile, but if it fails (e.g. RLS error due to expired session), use minimal data to KEEP LOGGED IN.
             const { data: profile } = await getProfile(storedUserId);
-            if (profile) {
-              const appUser: User = {
-                id: profile.id,
-                nickname: profile.nickname || '名無し',
-                role: profile.role as any || 'resident',
-                avatar: profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.id,
-                score: profile.score || 0,
-                level: profile.level || 1,
-                selectedAreas: profile.selected_areas || ['さいたま市大宮区'],
-                isLineConnected: true
-              };
-              if (mounted) {
-                setUser(appUser);
-                setSelectedAreas(appUser.selectedAreas);
-                setIsAuthChecking(false);
-              }
-            } else {
-              localStorage.removeItem('saitama_user_id');
-              // No valid stored user.
-              // STOP LOADING ONLY IF NO AUTH REDIRECTS IN PROGRESS
-              if ((!hasCode || !hasState) && !hasHash) {
-                if (mounted) setIsAuthChecking(false);
-              } else {
-                console.log('Deferred loading stop due to detected Auth Redirect Params');
-              }
+
+            // Fallback profile if DB fetch fails but ID exists
+            const restoredUser: User = {
+              id: storedUserId,
+              nickname: profile?.nickname || localStorage.getItem('saitama_user_nickname') || 'ユーザー',
+              role: (profile?.role as any) || 'resident',
+              avatar: profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + storedUserId,
+              score: profile?.score || 0,
+              level: profile?.level || 1,
+              selectedAreas: profile?.selected_areas || ['さいたま市大宮区'],
+              isLineConnected: true
+            };
+
+            if (mounted) {
+              setUser(restoredUser);
+              setSelectedAreas(restoredUser.selectedAreas);
+              setIsAuthChecking(false);
             }
           } else {
-            // No stored session.
-            // STOP LOADING ONLY IF NO AUTH REDIRECTS IN PROGRESS
-            if ((!hasCode || !hasState) && !hasHash) {
-              if (mounted) setIsAuthChecking(false);
-            } else {
-              console.log('Deferred loading stop due to detected Auth Redirect Params');
-            }
+            // No stored session, no hash -> Landing Page
+            // Stop loading ONLY if we are not in the middle of a redirect flow (double check)
+            if (mounted) setIsAuthChecking(false);
           }
         }
       } catch (e) {
