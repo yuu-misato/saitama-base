@@ -9,9 +9,13 @@ const Callback = lazy(() => import('./pages/auth/Callback'));
 
 // Loading component
 const PageLoading = () => (
-  <div className="min-h-screen flex items-center justify-center bg-white flex-col">
-    <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full mb-4"></div>
-    <p className="text-slate-500 font-bold animate-pulse">読み込み中...</p>
+  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-white flex-col">
+    <div className="relative">
+      <div className="w-16 h-16 border-4 border-indigo-100 border-t-indigo-500 rounded-full animate-spin"></div>
+      <div className="absolute top-0 left-0 w-16 h-16 flex items-center justify-center">
+        <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+      </div>
+    </div>
   </div>
 );
 
