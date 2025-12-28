@@ -8,7 +8,7 @@ const Callback = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const { checkSession } = useAuth();
-    const [status, setStatus] = useState('Processing login...');
+    const [status, setStatus] = useState('ログイン処理中...');
     const [error, setError] = useState<string | null>(null);
     const [email, setEmail] = useState('');
     const [lineProfile, setLineProfile] = useState<any>(null); // Use any or proper type if available
@@ -19,13 +19,14 @@ const Callback = () => {
             const state = searchParams.get('state');
 
             if (!code || !state) {
-                setError('Invalid callback parameters');
+                setError('不正なアクセスです (コードまたはステートが不足しています)');
                 return;
             }
 
             try {
                 const redirectUri = window.location.origin + '/auth/callback';
                 logger.log('Processing callback with code:', code);
+                setStatus('サーバーと通信中...');
 
                 // DIRECT DEBUGGING: Use fetch to see raw error
                 const functionUrl = 'https://kykuokxmukjvlytufjtt.supabase.co/functions/v1/line-login';
@@ -42,14 +43,16 @@ const Callback = () => {
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    throw new Error(`Server Error (${response.status}): ${errorText}`);
+                    throw new Error(`サーバーエラー (${response.status}): ${errorText}`);
                 }
 
+                setStatus('ログイン情報を確認中...');
                 const data = await response.json();
 
                 if (data?.error) throw new Error(data.error);
 
                 if (data?.token_hash) {
+                    setStatus('セッションを作成中...');
                     const { error: otpError } = await supabase.auth.verifyOtp({
                         token_hash: data.token_hash,
                         type: 'magiclink'
@@ -58,18 +61,24 @@ const Callback = () => {
                     if (otpError) throw otpError;
 
                     logger.log('Session verified, updating auth context...');
+                    setStatus('ユーザーデータを読み込み中...');
                     await checkSession(); // Force update context
 
-                    navigate('/dashboard', { replace: true });
+                    setStatus('完了！ダッシュボードへ移動します...');
+                    setTimeout(() => {
+                        navigate('/dashboard', { replace: true });
+                    }, 500);
                 } else if (data?.status === 'new_user') {
+                    // This should theoretically not be reached due to auto-registration fallback in backend
+                    // but keeping it just in case logic fails or changes
                     setStatus('new_user');
                     setLineProfile(data.line_profile);
                 } else {
-                    throw new Error('No session token returned');
+                    throw new Error('セッション情報が取得できませんでした');
                 }
             } catch (err: any) {
                 logger.error('Login Callback Error:', err);
-                setError(err.message || 'Login failed');
+                setError(err.message || 'ログインに失敗しました');
             }
         };
 
@@ -80,7 +89,7 @@ const Callback = () => {
         e.preventDefault();
         if (!email || !lineProfile) return;
 
-        setStatus('Registering...');
+        setStatus('登録処理中...');
         try {
             // DIRECT DEBUGGING
             const functionUrl = 'https://kykuokxmukjvlytufjtt.supabase.co/functions/v1/line-login';
@@ -103,7 +112,7 @@ const Callback = () => {
 
             if (!response.ok) {
                 const txt = await response.text();
-                throw new Error(`Register Failed: ${txt}`);
+                throw new Error(`登録エラー: ${txt}`);
             }
             const data = await response.json();
 
@@ -119,7 +128,7 @@ const Callback = () => {
                 await checkSession();
                 navigate('/dashboard', { replace: true });
             } else {
-                throw new Error('Registration failed: No session returned');
+                throw new Error('登録に失敗しました: セッションがありません');
             }
 
         } catch (err: any) {
@@ -166,7 +175,7 @@ const Callback = () => {
     if (error) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-red-50 flex-col p-4 text-center">
-                <div className="text-red-500 font-bold mb-2">Login Failed</div>
+                <div className="text-red-500 font-bold mb-2">ログインエラー</div>
                 <div className="text-sm text-slate-600 mb-4 bg-white p-4 rounded shadow border border-red-100 max-w-lg break-all">
                     {error}
                 </div>
@@ -175,13 +184,13 @@ const Callback = () => {
                         onClick={() => window.location.reload()}
                         className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition shadow-sm"
                     >
-                        Retry
+                        再試行
                     </button>
                     <button
                         onClick={() => navigate('/')}
                         className="px-4 py-2 bg-white text-slate-600 border border-slate-300 rounded hover:bg-slate-50 transition shadow-sm"
                     >
-                        Back to Home
+                        トップへ戻る
                     </button>
                 </div>
             </div>

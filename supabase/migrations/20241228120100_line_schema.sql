@@ -23,7 +23,9 @@ create table if not exists line_notification_settings (
 
 -- RLS policies (simple defaults)
 alter table line_accounts enable row level security;
+drop policy if exists "Users can view own line account" on line_accounts;
 create policy "Users can view own line account" on line_accounts for select using (auth.uid() = user_id);
 
 alter table line_notification_settings enable row level security;
+drop policy if exists "Users can view own settings" on line_notification_settings;
 create policy "Users can view own settings" on line_notification_settings for select using (auth.uid() = user_id);

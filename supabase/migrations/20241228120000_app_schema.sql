@@ -16,8 +16,11 @@ create table if not exists profiles (
 
 -- RLS for profiles
 alter table profiles enable row level security;
+drop policy if exists "Public profiles are viewable by everyone." on profiles;
 create policy "Public profiles are viewable by everyone." on profiles for select using (true);
+drop policy if exists "Users can insert their own profile." on profiles;
 create policy "Users can insert their own profile." on profiles for insert with check (auth.uid() = id);
+drop policy if exists "Users can update own profile." on profiles;
 create policy "Users can update own profile." on profiles for update using (auth.uid() = id);
 
 -- Communities table
@@ -33,7 +36,9 @@ create table if not exists communities (
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 alter table communities enable row level security;
+drop policy if exists "Communities are viewable by everyone." on communities;
 create policy "Communities are viewable by everyone." on communities for select using (true);
+drop policy if exists "Authenticated users can create communities." on communities;
 create policy "Authenticated users can create communities." on communities for insert with check (auth.role() = 'authenticated');
 
 -- Community Members
@@ -44,7 +49,9 @@ create table if not exists community_members (
   primary key (community_id, user_id)
 );
 alter table community_members enable row level security;
+drop policy if exists "Members are viewable by everyone." on community_members;
 create policy "Members are viewable by everyone." on community_members for select using (true);
+drop policy if exists "Users can join communities." on community_members;
 create policy "Users can join communities." on community_members for insert with check (auth.uid() = user_id);
 
 -- Posts table
@@ -60,7 +67,9 @@ create table if not exists posts (
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 alter table posts enable row level security;
+drop policy if exists "Posts are viewable by everyone." on posts;
 create policy "Posts are viewable by everyone." on posts for select using (true);
+drop policy if exists "Users can create posts." on posts;
 create policy "Users can create posts." on posts for insert with check (auth.role() = 'authenticated');
 
 -- Comments table
@@ -72,7 +81,9 @@ create table if not exists comments (
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 alter table comments enable row level security;
+drop policy if exists "Comments are viewable by everyone." on comments;
 create policy "Comments are viewable by everyone." on comments for select using (true);
+drop policy if exists "Users can create comments." on comments;
 create policy "Users can create comments." on comments for insert with check (auth.role() = 'authenticated');
 
 -- Kairanbans table
@@ -89,7 +100,9 @@ create table if not exists kairanbans (
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 alter table kairanbans enable row level security;
+drop policy if exists "Kairanbans are viewable by everyone." on kairanbans;
 create policy "Kairanbans are viewable by everyone." on kairanbans for select using (true);
+drop policy if exists "Users can create kairanbans." on kairanbans;
 create policy "Users can create kairanbans." on kairanbans for insert with check (auth.role() = 'authenticated');
 
 -- Coupons table
@@ -106,7 +119,9 @@ create table if not exists coupons (
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 alter table coupons enable row level security;
+drop policy if exists "Coupons are viewable by everyone." on coupons;
 create policy "Coupons are viewable by everyone." on coupons for select using (true);
+drop policy if exists "Users can create coupons." on coupons;
 create policy "Users can create coupons." on coupons for insert with check (auth.role() = 'authenticated');
 
 -- Volunteer Missions table
@@ -122,7 +137,9 @@ create table if not exists volunteer_missions (
   created_at timestamp with time zone default timezone('utc'::text, now())
 );
 alter table volunteer_missions enable row level security;
+drop policy if exists "Missions are viewable by everyone." on volunteer_missions;
 create policy "Missions are viewable by everyone." on volunteer_missions for select using (true);
+drop policy if exists "Users can create missions." on volunteer_missions;
 create policy "Users can create missions." on volunteer_missions for insert with check (auth.role() = 'authenticated');
 
 -- Mission Participants (for RPC)
@@ -133,6 +150,7 @@ create table if not exists mission_participants (
   primary key (mission_id, user_id)
 );
 alter table mission_participants enable row level security;
+drop policy if exists "Participants are viewable by everyone." on mission_participants;
 create policy "Participants are viewable by everyone." on mission_participants for select using (true);
 
 
@@ -179,6 +197,7 @@ create table if not exists post_likes (
   primary key (post_id, user_id)
 );
 alter table post_likes enable row level security;
+drop policy if exists "Likes are viewable by everyone." on post_likes;
 create policy "Likes are viewable by everyone." on post_likes for select using (true);
 
 create or replace function toggle_like(p_id uuid, u_id uuid)
