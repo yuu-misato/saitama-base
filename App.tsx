@@ -562,6 +562,7 @@ const App: React.FC = () => {
 
       // Update local storage for persistence
       localStorage.setItem('saitama_user_nickname', nickname);
+      localStorage.setItem('saitama_user_profile', JSON.stringify(updatedUser));
     }
   };
 
