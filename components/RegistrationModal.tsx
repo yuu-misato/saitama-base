@@ -1,4 +1,3 @@
-```
 import React, { useState, useEffect } from 'react';
 import { PREFECTURES, MUNICIPALITIES_BY_PREFECTURE } from '../constants';
 
@@ -11,7 +10,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ initialNickname, 
     const [nickname, setNickname] = useState(initialNickname);
     const [prefecture, setPrefecture] = useState('埼玉県');
     const [municipality, setMunicipality] = useState('');
-    
+
     // Get list based on selected prefecture
     const municipalities = MUNICIPALITIES_BY_PREFECTURE[prefecture] || [];
 
@@ -26,7 +25,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ initialNickname, 
 
     const handleRegister = () => {
         if (!nickname) return;
-        
+
         // Final Area String: e.g. "東京都世田谷区" or "埼玉県さいたま市大宮区"
         // Note: Our data for Saitama includes "さいたま市..." full name, but some others might just be city name.
         // If the municipality string already contains the prefecture name (unlikely in this dataset) or is unique enough.
@@ -45,12 +44,12 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ initialNickname, 
         // Let's do: if (prefecture === '埼玉県') return municipality; else return municipality;
         // Wait, "世田谷区" without "東京都" is weird.
         // Let's construct full address for non-Saitama to be safe, but keep Saitama as is.
-        
+
         let finalArea = municipality;
         // If it's NOT Saitama, and municipality doesn't start with Prefecture (usually doesn't)
         if (prefecture !== '埼玉県') {
-             // For consistency in UI, maybe we want "東京都千代田区".
-             finalArea = `${ prefecture }${ municipality } `;
+            // For consistency in UI, maybe we want "東京都千代田区".
+            finalArea = `${prefecture}${municipality} `;
         }
 
         onRegister(nickname, [finalArea]);
