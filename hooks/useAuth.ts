@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User } from '../types';
 import { supabase, getProfile, createProfile } from '../services/supabaseService';
-import toast from 'react-hot-toast';
+
 
 // Storage Keys
 const STORAGE_KEYS = {
