@@ -235,7 +235,11 @@ const App: React.FC = () => {
 
         } catch (error) {
           console.error('Login Callback Error:', error);
-          addToast('ログイン処理に失敗しました', 'error');
+          addToast('ログイン処理に失敗しました。トップページに戻ります。', 'error');
+          // Force reload to clear state and remove query params effectively
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 2000);
         }
       };
 
