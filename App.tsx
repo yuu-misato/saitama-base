@@ -526,17 +526,31 @@ const App: React.FC = () => {
   // Auth Logic merged into initAuth (Line 51)
 
   const handleRegistrationComplete = async (nickname: string, areas: string[]) => {
-    if (user) {
-      const updatedUser = { ...user, nickname, selectedAreas: areas };
+    // Use 'user' if available (editing), otherwise use 'tempUser' (new registration)
+    const targetUser = user || tempUser;
+
+    if (targetUser) {
+      const updatedUser = { ...targetUser, nickname, selectedAreas: areas };
+
+      // Attempt to save to Supabase
       const { error } = await createProfile(updatedUser);
-      if (!error) {
-        setUser(updatedUser);
-        setSelectedAreas(areas);
-        setIsEditingProfile(false);
-        addToast('プロフィールを更新しました', 'success');
+
+      if (error) {
+        console.error('Registration/Update failed on server:', error);
+        // Fallback: If it's an RLS issue or Guest mode, allow local proceed anyway
+        addToast('サーバーへの保存に失敗しましたが、続行します', 'info');
       } else {
-        addToast('更新に失敗しました', 'error');
+        addToast(user ? 'プロフィールを更新しました' : '登録が完了しました！', 'success');
       }
+
+      // Always update local state to unblock user
+      setUser(updatedUser);
+      setTempUser(null); // Clear temp state
+      setSelectedAreas(areas);
+      setIsEditingProfile(false);
+
+      // Update local storage for persistence
+      localStorage.setItem('saitama_user_nickname', nickname);
     }
   };
 
