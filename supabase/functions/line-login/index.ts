@@ -1,5 +1,4 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.46.0';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -8,30 +7,35 @@ const corsHeaders = {
 
 const LINE_LOGIN_CHANNEL_ID = Deno.env.get('LINE_CHANNEL_ID') || Deno.env.get('LINE_LOGIN_CHANNEL_ID');
 const LINE_LOGIN_CHANNEL_SECRET = Deno.env.get('LINE_CHANNEL_SECRET') || Deno.env.get('LINE_LOGIN_CHANNEL_SECRET');
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-serve(async (req) => {
+Deno.serve(async (req) => {
     // 0. Handle CORS Preflight
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders });
     }
 
     try {
+        // Health Check (GET)
+        if (req.method === 'GET') {
+            return new Response(JSON.stringify({
+                status: 'operational',
+                timestamp: new Date().toISOString()
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+        }
+
         // 1. Env Var Check
         if (!LINE_LOGIN_CHANNEL_ID || !LINE_LOGIN_CHANNEL_SECRET || !SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-            console.error("Missing credentials:", { 
-                hasChannelId: !!LINE_LOGIN_CHANNEL_ID, 
-                hasSecret: !!LINE_LOGIN_CHANNEL_SECRET,
-                hasUrl: !!SUPABASE_URL,
-                hasKey: !!SUPABASE_SERVICE_ROLE_KEY
-            });
+            console.error("Missing credentials");
             throw new Error("Server configuration error: Missing LINE or Supabase credentials.");
         }
 
         const body = await req.json();
-        const { action, code, profile_data, liff_access_token, line_user_id, display_name, picture_url } = body;
-        
+        const { action, code, profile_data, line_user_id, display_name, picture_url } = body;
+
         // Normalize redirect_uri (accept both snake_case and camelCase)
         const redirect_uri = body.redirect_uri || body.redirectUri;
 
@@ -65,7 +69,7 @@ serve(async (req) => {
                 body: new URLSearchParams({
                     grant_type: 'authorization_code',
                     code,
-                    redirect_uri, // now guaranteed to be set if check passed
+                    redirect_uri,
                     client_id: LINE_LOGIN_CHANNEL_ID,
                     client_secret: LINE_LOGIN_CHANNEL_SECRET,
                 }),
@@ -165,8 +169,7 @@ serve(async (req) => {
                 .maybeSingle();
 
             if (!lineAccount) {
-                 // Return 200 with error field so frontend handles it gracefully
-                 return new Response(JSON.stringify({ error: 'restore_failed' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+                return new Response(JSON.stringify({ error: 'restore_failed' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
             }
 
             const { data: user } = await supabase.auth.admin.getUserById(lineAccount.user_id);
@@ -183,7 +186,7 @@ serve(async (req) => {
 
         // 6. Register (New User)
         if (action === 'register') {
-            const { email, line_user_id, display_name, picture_url, nickname, area } = profile_data;
+            const { email, line_user_id, display_name, picture_url, nickname } = profile_data;
             const randomPassword = crypto.randomUUID();
 
             const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -216,13 +219,12 @@ serve(async (req) => {
 
         return new Response('Not Found', { status: 404, headers: corsHeaders });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
-        // Return 200 with error details so frontend receives the message instead of 500/400 generic error
-        // Note: We use JSON body to carry the error message
-        return new Response(JSON.stringify({ error: error.message }), { 
-            status: 200, 
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        const errorMessage = error?.message || 'Unknown error occurred';
+        return new Response(JSON.stringify({ error: errorMessage }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
     }
 });
