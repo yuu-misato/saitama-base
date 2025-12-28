@@ -9,6 +9,7 @@ import BusinessPanel from '../components/BusinessPanel';
 import LandingPage from '../components/LandingPage';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useLineLogin } from '../hooks/useLineLogin'; // Add hook import
 /* Auth logic handled by App.tsx router */
 
 import { User, Post, PostCategory, Coupon, Kairanban, VolunteerMission, Community } from '../types';
@@ -190,56 +191,14 @@ const Dashboard: React.FC = () => {
   /* LINE Login Callback Handler removed, handled by /auth/callback route */
 
 
-  // LINEログイン (Edge Function経由 - Custom Auth Flow)
-  const handleLineLogin = async (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
-    localStorage.setItem('loginRole', role);
-    localStorage.setItem('auth_in_progress', 'true'); // Mark auth start
 
-    // LINE Login Channel ID
-    const clientId = '2008784970';
-    const redirectUri = window.location.origin;
-    const state = Math.random().toString(36).substring(7);
-    localStorage.setItem('line_auth_state', state);
+  const { login: lineLogin } = useLineLogin(); // Use hook
 
-    // LINE認証画面へリダイレクト
-    const lineAuthUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=profile%20openid`;
-
-    console.log('Redirecting to LINE Auth:', lineAuthUrl);
-    window.location.href = lineAuthUrl;
-
-    // 以下、古いコード（デッドコード）などはreturnで実行されないようにする
-    return;
-
-
-
-    // --- 以下、現状のデモモード（IDがないため） ---
-    // 認証プロセスをすべてスキップし、即座にログイン完了とみなす
-    console.log('Skipping LINE Auth for demo purposes (Missing Channel ID)...');
-
-    // ダミーのユーザーセッションを作成
-    const dummyUserId = 'demo-user-' + Math.random().toString(36).substring(7);
-    const pendingRegistrationStr = localStorage.getItem('pendingRegistration');
-    const pendingRegistration = pendingRegistrationStr ? JSON.parse(pendingRegistrationStr) : null;
-
-    const demoUser: User = {
-      id: dummyUserId,
-      nickname: pendingRegistration?.nickname || 'ゲストユーザー',
-      role: role,
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=guest',
-      level: 1,
-      score: 100,
-      selectedAreas: pendingRegistration?.areas || ['さいたま市大宮区'], // Sync here
-      isLineConnected: true
-    };
-
-    await createProfile(demoUser);
-    setUser(demoUser);
-    setSelectedAreas(demoUser.selectedAreas);
-    localStorage.setItem('saitama_user_id', dummyUserId);
-    addToast('デモログインしました（Channel ID未設定のため）', 'success');
+  // LINE Login (Delegated to hook)
+  const handleLineLogin = (role: 'resident' | 'chokai_leader' | 'business' = 'resident') => {
+    lineLogin(role);
   };
 
-  // Auth Logic merged into initAuth (Line 51)
 
   const handleRegistrationComplete = async (nickname: string, areas: string[]) => {
     // Use 'user' if available (editing), otherwise use 'tempUser' (new registration)
