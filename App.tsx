@@ -415,9 +415,30 @@ const App: React.FC = () => {
           }
         } catch (err: any) {
           console.error('LINE Login Error:', err);
-          addToast('ログイン失敗: ' + (err.message || 'Unknown error'), 'error');
-          setIsAuthChecking(false); // Force UI render on error
-          // 失敗時はデモモードにフォールバックさせますか？今回はエラー表示のみ。
+          // FALLBACK: If Server Auth fails, force login as Guest to unblock user
+          addToast('認証サーバー応答なし。ゲストモードでログインします', 'info');
+
+          const pendingRegStr = localStorage.getItem('pendingRegistration');
+          const pendingReg = pendingRegStr ? JSON.parse(pendingRegStr) : null;
+
+          const fallbackUser: User = {
+            id: 'guest-' + Math.random().toString(36).substring(7),
+            nickname: pendingReg?.nickname || 'ゲストユーザー',
+            role: 'resident',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=fallback',
+            level: 1,
+            score: 0,
+            selectedAreas: pendingReg?.areas || ['さいたま市大宮区'],
+            isLineConnected: false
+          };
+
+          if (mounted) {
+            setUser(fallbackUser);
+            setSelectedAreas(fallbackUser.selectedAreas);
+            localStorage.setItem('saitama_user_id', fallbackUser.id);
+            setIsAuthChecking(false);
+          }
+
         } finally {
           // URLを綺麗にする
           window.history.replaceState({}, '', window.location.pathname);
