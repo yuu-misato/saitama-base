@@ -91,9 +91,50 @@ const App: React.FC = () => {
       });
     }
 
-    // 2. Supabase Auth (今回は未使用だが残す)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Logic for supabase auth if integrated later
+    // 2. Supabase Auth (Magic Link Redirect Handling)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        console.log('Supabase Session Found:', session.user.id);
+        const { data: profile, error } = await getProfile(session.user.id);
+
+        if (profile) {
+          // Existing user
+          console.log('Profile loaded:', profile);
+          const appUser: User = {
+            id: profile.id,
+            nickname: profile.nickname || '名無し',
+            role: profile.role as any || 'resident',
+            avatar: profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.id,
+            score: profile.score || 0,
+            level: profile.level || 1,
+            selectedAreas: profile.selected_areas || ['さいたま市大宮区'],
+            isLineConnected: true
+          };
+          setUser(appUser);
+          setSelectedAreas(appUser.selectedAreas);
+          localStorage.setItem('saitama_user_id', appUser.id);
+          addToast('ログインしました', 'success');
+        } else {
+          // New user (or profile missing) - create from Session Meta
+          console.log('No profile found, creating new...');
+          const meta = session.user.user_metadata;
+          const newUser: User = {
+            id: session.user.id,
+            nickname: meta.nickname || 'ゲスト',
+            role: 'resident',
+            avatar: meta.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + session.user.id,
+            level: 1,
+            score: 100,
+            selectedAreas: ['さいたま市大宮区'], // Default if completely new
+            isLineConnected: true
+          };
+          await createProfile(newUser);
+          setUser(newUser);
+          setSelectedAreas(newUser.selectedAreas);
+          localStorage.setItem('saitama_user_id', newUser.id);
+          addToast('アカウントを作成しました', 'success');
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
